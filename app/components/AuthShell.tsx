@@ -22,7 +22,9 @@ export default function AuthShell({
           <Logo />
         </Link>
         <div className="relative max-w-md">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">{brand.hero.eyebrow}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+            {brand.hero.eyebrow}
+          </p>
           <p className="font-display mt-5 text-4xl font-medium leading-[1.12] tracking-[-0.015em]">
             {brand.hero.title}
           </p>

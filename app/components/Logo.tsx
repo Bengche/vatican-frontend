@@ -1,41 +1,20 @@
+import Image from "next/image";
 import { brand } from "@/config/brand";
 
-// Square monogram badge. Colours and letters come from config/brand.ts.
-export function BrandMark({ size = 40 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
+// Artwork lives in public/logo-mark.png; replace that file to change the mark.
+export function BrandMark({ size = 46, framed = false }: { size?: number; framed?: boolean }) {
+  const image = (
+    <Image
+      src="/logo-mark.png"
+      alt={brand.name}
+      width={Math.round(size * 1.0875)}
       height={size}
-      viewBox="0 0 48 48"
-      role="img"
-      aria-label={brand.name}
+      priority
       className="shrink-0"
-    >
-      <rect width="48" height="48" rx="7" fill="var(--brand-primary-dark)" />
-      <rect
-        x="2.5"
-        y="2.5"
-        width="43"
-        height="43"
-        rx="5"
-        fill="none"
-        stroke="var(--brand-accent)"
-        strokeWidth="1.25"
-      />
-      <text
-        x="24"
-        y="31.5"
-        textAnchor="middle"
-        fontSize={brand.monogram.length > 2 ? 17 : 22}
-        fontWeight="600"
-        letterSpacing="0.5"
-        fill="var(--brand-accent)"
-        style={{ fontFamily: "var(--font-serif), Georgia, serif" }}
-      >
-        {brand.monogram}
-      </text>
-    </svg>
+    />
   );
+  if (!framed) return image;
+  return <span className="flex shrink-0 items-center justify-center rounded-lg bg-primary-dark p-1.5">{image}</span>;
 }
 
 export default function Logo({
@@ -48,7 +27,7 @@ export default function Logo({
   const light = tone === "light";
   return (
     <span className="flex items-center gap-3">
-      <BrandMark />
+      <BrandMark framed={!light} />
       <span className="flex flex-col leading-none">
         <span
           className={`text-[13px] font-semibold uppercase tracking-[0.2em] ${light ? "text-white" : "text-primary"}`}
