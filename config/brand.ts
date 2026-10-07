@@ -25,6 +25,7 @@ export const brand = {
   },
 
   hero: {
+    eyebrow: "Intercity bus travel",
     title: "Travel Cameroon in comfort, booked in minutes.",
     subtitle:
       "Choose your seat, pay securely with Mobile Money and board with a verified digital ticket. No queues, no guesswork.",

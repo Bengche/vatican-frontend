@@ -90,7 +90,8 @@ export default async function HomePage() {
           <RouteMotif className="absolute bottom-40 right-0 top-8 hidden w-[44%] lg:block" />
           <div className="relative mx-auto max-w-7xl px-4 pb-32 pt-14 sm:px-6 sm:pt-20 lg:px-8 lg:pb-40 lg:pt-24">
             <div className="max-w-3xl">
-              <h1 className="text-4xl font-medium leading-[1.08] tracking-[-0.02em] sm:text-5xl lg:text-[3.75rem]">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">{brand.hero.eyebrow}</p>
+              <h1 className="mt-5 text-4xl font-medium leading-[1.08] tracking-[-0.02em] sm:text-5xl lg:text-[3.75rem]">
                 {brand.hero.title}
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
