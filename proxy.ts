@@ -10,7 +10,10 @@ function readSession(token?: string): { valid: boolean; role: string } {
   try {
     const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     const { exp, role } = JSON.parse(atob(payload));
-    return { valid: Boolean(exp) && exp > Math.floor(Date.now() / 1000), role: role || "passenger" };
+    return {
+      valid: Boolean(exp) && exp > Math.floor(Date.now() / 1000),
+      role: role || "passenger",
+    };
   } catch {
     return { valid: false, role: "passenger" };
   }
@@ -22,8 +25,12 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   const session = readSession(token);
 
-  const isProtected = PROTECTED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
-  const isAuthRoute = AUTH_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+  const isProtected = PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+  const isAuthRoute = AUTH_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(`${route}/`),
+  );
 
   if (isProtected && !session.valid) {
     const loginUrl = new URL("/login", request.url);
@@ -33,18 +40,28 @@ export function proxy(request: NextRequest) {
     return response;
   }
 
-  if ((pathname === "/admin" || pathname.startsWith("/admin/")) && !ADMIN_ROLES.includes(session.role)) {
+  if (
+    (pathname === "/admin" || pathname.startsWith("/admin/")) &&
+    !ADMIN_ROLES.includes(session.role)
+  ) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (isAuthRoute && session.valid) {
     const redirect = request.nextUrl.searchParams.get("redirect");
-    return NextResponse.redirect(new URL(redirect && redirect.startsWith("/") ? redirect : "/dashboard", request.url));
+    return NextResponse.redirect(
+      new URL(
+        redirect && redirect.startsWith("/") ? redirect : "/dashboard",
+        request.url,
+      ),
+    );
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|icon.svg|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };

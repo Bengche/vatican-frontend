@@ -1,12 +1,19 @@
 import type { Metadata, Viewport } from "next";
 import type { CSSProperties } from "react";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Newsreader, Public_Sans } from "next/font/google";
 import { brand } from "@/config/brand";
 import "./globals.css";
 
-const font = Plus_Jakarta_Sans({
+const sans = Public_Sans({
   variable: "--font-body",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const serif = Newsreader({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
@@ -42,9 +49,13 @@ const brandVariables = {
   "--brand-accent-soft": brand.colors.accentSoft,
 } as CSSProperties;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" className={font.variable} style={brandVariables}>
+    <html lang="en" className={`${sans.variable} ${serif.variable}`} style={brandVariables}>
       <body className="flex min-h-dvh flex-col">{children}</body>
     </html>
   );

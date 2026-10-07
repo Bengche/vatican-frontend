@@ -7,6 +7,7 @@
   --color-accent-dark: var(--brand-accent-dark);
   --color-accent-soft: var(--brand-accent-soft);
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-serif), Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
 
@@ -17,7 +18,7 @@ html {
 }
 
 body {
-  background: #f6f7fb;
+  background: #f6f6f3;
   color: #0f172a;
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -28,13 +29,22 @@ body {
   background: color-mix(in srgb, var(--brand-accent) 30%, white);
 }
 
+@layer base {
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+}
+
 @layer components {
   .card {
-    @apply rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_12px_32px_-16px_rgba(15,23,42,0.12)];
+    @apply rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05)];
   }
 
   .eyebrow {
-    @apply text-[11px] font-bold uppercase tracking-[0.16em] text-accent-dark;
+    @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-dark;
   }
 
   .label {
@@ -42,7 +52,7 @@ body {
   }
 
   .input {
-    @apply h-11 w-full rounded-xl border border-slate-300 bg-white px-3.5 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 sm:text-sm;
+    @apply h-11 w-full rounded-lg border border-slate-300 bg-white px-3.5 text-base text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:cursor-not-allowed disabled:bg-slate-100 sm:text-sm;
   }
 
   textarea.input {
@@ -50,15 +60,15 @@ body {
   }
 
   .btn {
-    @apply inline-flex h-11 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-lg px-5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .btn-primary {
-    @apply bg-primary text-white shadow-sm hover:bg-primary-dark;
+    @apply bg-primary text-white hover:bg-primary-dark;
   }
 
   .btn-accent {
-    @apply bg-accent text-primary-dark shadow-sm hover:brightness-95;
+    @apply bg-accent text-primary-dark hover:brightness-95;
   }
 
   .btn-outline {
@@ -74,11 +84,11 @@ body {
   }
 
   .btn-sm {
-    @apply h-9 rounded-lg px-3.5 text-xs;
+    @apply h-9 rounded-md px-3.5 text-xs;
   }
 
   .alert {
-    @apply rounded-xl border px-4 py-3 text-sm leading-relaxed;
+    @apply rounded-lg border px-4 py-3 text-sm leading-relaxed;
   }
 
   .alert-error {
@@ -98,22 +108,22 @@ body {
   }
 
   .table-head {
-    @apply bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500;
+    @apply bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-500;
   }
 }
 
 .skeleton {
-  background: linear-gradient(90deg, #eef0f5 25%, #f6f7fb 37%, #eef0f5 63%);
-  background-size: 400% 100%;
-  animation: shimmer 1.4s ease infinite;
+  background: #e8e9ee;
+  animation: skeleton-fade 1.6s ease-in-out infinite;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: 100% 50%;
-  }
+@keyframes skeleton-fade {
+  0%,
   100% {
-    background-position: 0 50%;
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
   }
 }
 

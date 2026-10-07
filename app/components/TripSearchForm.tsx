@@ -39,7 +39,12 @@ function ParkOptions({ parks }: { parks: Park[] }) {
   );
 }
 
-export default function TripSearchForm({ parks: initialParks, initial, onSearch, submitLabel = "Find buses" }: Props) {
+export default function TripSearchForm({
+  parks: initialParks,
+  initial,
+  onSearch,
+  submitLabel = "Find buses",
+}: Props) {
   const router = useRouter();
   const [parks, setParks] = useState<Park[]>(initialParks ?? []);
   const [loading, setLoading] = useState(!initialParks?.length);
@@ -56,7 +61,10 @@ export default function TripSearchForm({ parks: initialParks, initial, onSearch,
     let active = true;
     api
       .get("/parks")
-      .then(({ data }) => active && setParks(Array.isArray(data.parks) ? data.parks : []))
+      .then(
+        ({ data }) =>
+          active && setParks(Array.isArray(data.parks) ? data.parks : []),
+      )
       .catch(() => active && setFailed(true))
       .finally(() => active && setLoading(false));
     return () => {
@@ -77,8 +85,14 @@ export default function TripSearchForm({ parks: initialParks, initial, onSearch,
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!from || !to) return setError("Select where you are leaving from and where you are going.");
-    if (from === to) return setError("The departure and destination terminals must be different.");
+    if (!from || !to)
+      return setError(
+        "Select where you are leaving from and where you are going.",
+      );
+    if (from === to)
+      return setError(
+        "The departure and destination terminals must be different.",
+      );
     if (!date) return setError("Select your travel date.");
     setError("");
 
@@ -91,9 +105,19 @@ export default function TripSearchForm({ parks: initialParks, initial, onSearch,
     <form onSubmit={submit} noValidate>
       <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr_200px_auto] md:items-end">
         <div>
-          <label htmlFor="search-from" className="label">Leaving from</label>
-          <select id="search-from" className="input" value={from} onChange={(e) => setFrom(e.target.value)} disabled={loading || failed}>
-            <option value="">{loading ? "Loading terminals..." : "Select terminal"}</option>
+          <label htmlFor="search-from" className="label">
+            Leaving from
+          </label>
+          <select
+            id="search-from"
+            className="input"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            disabled={loading || failed}
+          >
+            <option value="">
+              {loading ? "Loading terminals..." : "Select terminal"}
+            </option>
             <ParkOptions parks={parks} />
           </select>
         </div>
@@ -104,25 +128,56 @@ export default function TripSearchForm({ parks: initialParks, initial, onSearch,
           aria-label="Swap departure and destination"
           className="mx-auto hidden h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary md:flex"
         >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
             <path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" />
           </svg>
         </button>
 
         <div>
-          <label htmlFor="search-to" className="label">Going to</label>
-          <select id="search-to" className="input" value={to} onChange={(e) => setTo(e.target.value)} disabled={loading || failed}>
-            <option value="">{loading ? "Loading terminals..." : "Select terminal"}</option>
+          <label htmlFor="search-to" className="label">
+            Going to
+          </label>
+          <select
+            id="search-to"
+            className="input"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            disabled={loading || failed}
+          >
+            <option value="">
+              {loading ? "Loading terminals..." : "Select terminal"}
+            </option>
             <ParkOptions parks={parks} />
           </select>
         </div>
 
         <div>
-          <label htmlFor="search-date" className="label">Travel date</label>
-          <input id="search-date" type="date" className="input" value={date} min={todayInCameroon()} onChange={(e) => setDate(e.target.value)} />
+          <label htmlFor="search-date" className="label">
+            Travel date
+          </label>
+          <input
+            id="search-date"
+            type="date"
+            className="input"
+            value={date}
+            min={todayInCameroon()}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </div>
 
-        <button type="submit" className="btn btn-primary w-full md:w-auto md:px-7" disabled={loading || failed}>
+        <button
+          type="submit"
+          className="btn btn-primary w-full md:w-auto md:px-7"
+          disabled={loading || failed}
+        >
           {submitLabel}
         </button>
       </div>
@@ -132,7 +187,13 @@ export default function TripSearchForm({ parks: initialParks, initial, onSearch,
           {error || (
             <>
               We could not load the terminals.{" "}
-              <button type="button" onClick={retry} className="font-semibold underline">Try again</button>
+              <button
+                type="button"
+                onClick={retry}
+                className="font-semibold underline"
+              >
+                Try again
+              </button>
             </>
           )}
         </p>

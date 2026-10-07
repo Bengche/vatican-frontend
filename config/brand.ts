@@ -1,12 +1,15 @@
 // Single source of truth for the agency identity shown across the website.
-// To launch for another agency, edit this file (and app/icon.svg) plus the .env values.
+// To launch for another agency, edit this file plus the .env values (icons and logo read from here).
 
 export const brand = {
   name: "Vatican Express",
   legalName: "Vatican Express Co. Ltd",
   monogram: "VE",
+  descriptor: "Intercity Coaches",
   tagline: "Intercity Travel across Cameroon",
-  siteUrl: (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, ""),
+  siteUrl: (
+    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+  ).replace(/\/+$/, ""),
 
   seo: {
     title: "Book Intercity Bus Tickets in Cameroon",

@@ -28,23 +28,42 @@ function LoginForm() {
     setSubmitting(true);
     setError("");
     try {
-      const { data } = await api.post("/login", { identifier: identifier.trim(), password });
+      const { data } = await api.post("/login", {
+        identifier: identifier.trim(),
+        password,
+      });
       setSession(data.token, data.user);
       const redirect = params.get("redirect");
-      router.replace(redirect && redirect.startsWith("/") && !redirect.startsWith("//") ? redirect : "/dashboard");
+      router.replace(
+        redirect && redirect.startsWith("/") && !redirect.startsWith("//")
+          ? redirect
+          : "/dashboard",
+      );
     } catch (err) {
-      setError(errorMessage(err, "We could not sign you in. Please try again."));
+      setError(
+        errorMessage(err, "We could not sign you in. Please try again."),
+      );
       setSubmitting(false);
     }
   };
 
   return (
     <form onSubmit={submit} noValidate className="space-y-5">
-      {registered && <div className="alert alert-success">Your account is ready. Sign in to continue.</div>}
-      {error && <div className="alert alert-error" role="alert">{error}</div>}
+      {registered && (
+        <div className="alert alert-success">
+          Your account is ready. Sign in to continue.
+        </div>
+      )}
+      {error && (
+        <div className="alert alert-error" role="alert">
+          {error}
+        </div>
+      )}
 
       <div>
-        <label htmlFor="identifier" className="label">Phone number or email</label>
+        <label htmlFor="identifier" className="label">
+          Phone number or email
+        </label>
         <input
           id="identifier"
           className="input"
@@ -57,7 +76,9 @@ function LoginForm() {
       </div>
 
       <div>
-        <label htmlFor="password" className="label">Password</label>
+        <label htmlFor="password" className="label">
+          Password
+        </label>
         <div className="relative">
           <input
             id="password"
@@ -77,13 +98,22 @@ function LoginForm() {
         </div>
       </div>
 
-      <button type="submit" className="btn btn-primary w-full" disabled={submitting}>
+      <button
+        type="submit"
+        className="btn btn-primary w-full"
+        disabled={submitting}
+      >
         {submitting ? "Signing in..." : "Sign in"}
       </button>
 
       <p className="text-center text-sm text-slate-600">
         New here?{" "}
-        <Link href="/register" className="font-semibold text-primary hover:underline">Create an account</Link>
+        <Link
+          href="/register"
+          className="font-semibold text-primary hover:underline"
+        >
+          Create an account
+        </Link>
       </p>
     </form>
   );
@@ -91,8 +121,11 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <AuthShell title="Welcome back" subtitle="Sign in to book seats and access your tickets.">
-      <Suspense fallback={<div className="skeleton h-64 rounded-2xl" />}>
+    <AuthShell
+      title="Welcome back"
+      subtitle="Sign in to book seats and access your tickets."
+    >
+      <Suspense fallback={<div className="skeleton h-64 rounded-xl" />}>
         <LoginForm />
       </Suspense>
     </AuthShell>
