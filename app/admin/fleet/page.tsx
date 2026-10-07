@@ -55,7 +55,7 @@ export default function FleetPage() {
         ),
       );
     } catch (err) {
-      setFleetError(errorMessage(err, "We could not update this coach."));
+      setFleetError(errorMessage(err, "We could not update this bus."));
     }
   };
 
@@ -86,16 +86,16 @@ export default function FleetPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Fleet and notices"
-        title="Coach availability and passenger notices"
-        description="Take coaches out of service and email everyone booked on a departure."
+        title="Bus availability and passenger notices"
+        description="Take buses out of service and email everyone booked on a departure."
       />
 
       <div className="grid items-start gap-6 lg:grid-cols-2">
         <section className="card overflow-hidden">
           <div className="border-b border-slate-100 p-5">
-            <h2 className="text-sm font-bold text-slate-900">Coaches</h2>
+            <h2 className="text-sm font-bold text-slate-900">Buses</h2>
             <p className="mt-1 text-xs text-slate-500">
-              Grounded coaches cannot be assigned to new departures.
+              Grounded buses cannot be assigned to new departures.
             </p>
           </div>
           {fleetError && (
@@ -106,7 +106,7 @@ export default function FleetPage() {
           <ul className="divide-y divide-slate-100">
             {buses.length === 0 && (
               <li className="p-8 text-center text-sm text-slate-500">
-                {loading ? "Loading..." : "No coaches registered yet."}
+                {loading ? "Loading..." : "No buses registered yet."}
               </li>
             )}
             {buses.map((bus) => (
@@ -196,7 +196,7 @@ export default function FleetPage() {
               className="input"
               rows={5}
               maxLength={2000}
-              placeholder="Explain the change clearly: new time, boarding point or replacement coach."
+              placeholder="Explain the change clearly: new time, boarding point or replacement bus."
               value={body}
               onChange={(e) => setBody(e.target.value)}
               required

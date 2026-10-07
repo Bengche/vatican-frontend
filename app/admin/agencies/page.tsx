@@ -49,7 +49,7 @@ export default function TerminalsPage() {
       const { data } = await api.get(`/admin/parks/${id}/buses`);
       setBuses(data.buses ?? []);
     } catch (err) {
-      setLoadError(errorMessage(err, "We could not load the coaches."));
+      setLoadError(errorMessage(err, "We could not load the buses."));
     }
   }, []);
 
@@ -117,7 +117,7 @@ export default function TerminalsPage() {
     } catch (err) {
       setBusMessage({
         type: "error",
-        text: errorMessage(err, "We could not register this coach."),
+        text: errorMessage(err, "We could not register this bus."),
       });
     } finally {
       setSavingBus(false);
@@ -137,7 +137,7 @@ export default function TerminalsPage() {
     } catch (err) {
       setBusMessage({
         type: "error",
-        text: errorMessage(err, "We could not update this coach."),
+        text: errorMessage(err, "We could not update this bus."),
       });
     }
   };
@@ -156,8 +156,8 @@ export default function TerminalsPage() {
     <div className="mx-auto max-w-6xl">
       <PageHeader
         eyebrow="Terminals"
-        title="Terminals and coaches"
-        description="Set where each terminal's ticket revenue is paid out and manage the coaches stationed there."
+        title="Terminals and buses"
+        description="Set where each terminal's ticket revenue is paid out and manage the buses stationed there."
       />
 
       {loadError && (
@@ -187,7 +187,7 @@ export default function TerminalsPage() {
 
       {!park ? (
         <div className="card p-10 text-center text-sm text-slate-500">
-          Select a terminal to manage its payout number and coaches.
+          Select a terminal to manage its payout number and buses.
         </div>
       ) : (
         <div className="space-y-8">
@@ -238,7 +238,7 @@ export default function TerminalsPage() {
           <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
             <form onSubmit={addBus} className="card space-y-4 p-5 sm:p-6">
               <h2 className="text-sm font-bold text-slate-900">
-                Register a coach
+                Register a bus
               </h2>
               {banner(busMessage)}
               <div>
@@ -294,14 +294,14 @@ export default function TerminalsPage() {
                 className="btn btn-primary w-full"
                 disabled={savingBus}
               >
-                {savingBus ? "Creating seat map..." : "Register coach"}
+                {savingBus ? "Creating seat map..." : "Register bus"}
               </button>
             </form>
 
             <section className="card overflow-hidden">
               <div className="flex items-center justify-between border-b border-slate-100 p-5">
                 <h2 className="text-sm font-bold text-slate-900">
-                  Coaches at {park.park_name}
+                  Buses at {park.park_name}
                 </h2>
                 <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                   {buses.length}
@@ -310,7 +310,7 @@ export default function TerminalsPage() {
               <ul className="divide-y divide-slate-100">
                 {buses.length === 0 && (
                   <li className="p-8 text-center text-sm text-slate-500">
-                    No coaches registered for this terminal yet.
+                    No buses registered for this terminal yet.
                   </li>
                 )}
                 {buses.map((bus) => (

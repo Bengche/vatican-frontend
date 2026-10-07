@@ -239,7 +239,7 @@ export default function AdminOverviewPage() {
               Departures below 40% capacity
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Upcoming coaches that need more passengers.
+              Upcoming buses that need more passengers.
             </p>
           </div>
           <div className="space-y-3 p-4">

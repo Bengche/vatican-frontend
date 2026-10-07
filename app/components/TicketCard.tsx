@@ -100,7 +100,7 @@ export default function TicketCard({
           </div>
           <div>
             <dt className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Coach
+              Bus
             </dt>
             <dd className="mt-1 font-bold text-slate-900">
               {booking.bus_number}

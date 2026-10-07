@@ -21,7 +21,7 @@ const STEPS = [
   },
   {
     title: "Pick your seat",
-    text: "Select your exact seat on the coach and enter each passenger's details as shown on their ID.",
+    text: "Select your exact seat on the bus and enter each passenger's details as shown on their ID.",
   },
   {
     title: "Pay with Mobile Money",
@@ -90,11 +90,7 @@ export default async function HomePage() {
           <RouteMotif className="absolute bottom-40 right-0 top-8 hidden w-[44%] lg:block" />
           <div className="relative mx-auto max-w-7xl px-4 pb-32 pt-14 sm:px-6 sm:pt-20 lg:px-8 lg:pb-40 lg:pt-24">
             <div className="max-w-3xl">
-              <p className="flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
-                <span className="h-px w-10 bg-accent" />
-                {brand.hero.eyebrow}
-              </p>
-              <h1 className="mt-5 text-4xl font-medium leading-[1.08] tracking-[-0.02em] sm:text-5xl lg:text-[3.75rem]">
+              <h1 className="text-4xl font-medium leading-[1.08] tracking-[-0.02em] sm:text-5xl lg:text-[3.75rem]">
                 {brand.hero.title}
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-relaxed text-slate-300 sm:text-lg">
@@ -145,7 +141,7 @@ export default async function HomePage() {
             <div>
               <p className="eyebrow">Upcoming departures</p>
               <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-                Next coaches on sale
+                Next buses on sale
               </h2>
             </div>
             <Link

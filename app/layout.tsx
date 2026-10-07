@@ -55,7 +55,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${sans.variable} ${serif.variable}`} style={brandVariables}>
+    <html
+      lang="en"
+      className={`${sans.variable} ${serif.variable}`}
+      style={brandVariables}
+    >
       <body className="flex min-h-dvh flex-col">{children}</body>
     </html>
   );

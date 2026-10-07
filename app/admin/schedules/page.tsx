@@ -161,7 +161,7 @@ export default function SchedulesPage() {
       <PageHeader
         eyebrow="Departures"
         title="Schedule and fares"
-        description="Publish coach departures. Seats become available to passengers immediately."
+        description="Publish bus departures. Seats become available to passengers immediately."
       />
 
       {message && (
@@ -184,7 +184,7 @@ export default function SchedulesPage() {
         <div className="grid gap-4 md:grid-cols-2">
           {select(
             "busId",
-            "Coach",
+            "Bus",
             buses.map((b) => ({
               value: b.id,
               label: `${b.bus_number} (${b.total_seats} seats, ${b.bus_type})`,
@@ -264,7 +264,7 @@ export default function SchedulesPage() {
               <tr>
                 <th className="px-5 py-3">Route</th>
                 <th className="px-5 py-3">Departure</th>
-                <th className="px-5 py-3">Coach</th>
+                <th className="px-5 py-3">Bus</th>
                 <th className="px-5 py-3">Fare</th>
                 <th className="px-5 py-3">Sold</th>
                 <th className="px-5 py-3 text-right">Actions</th>

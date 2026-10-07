@@ -5,7 +5,7 @@ export const brand = {
   name: "Vatican Express",
   legalName: "Vatican Express Co. Ltd",
   monogram: "VE",
-  descriptor: "Intercity Coaches",
+  descriptor: "Intercity Bus Travel",
   tagline: "Intercity Travel across Cameroon",
   siteUrl: (
     process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
@@ -14,7 +14,7 @@ export const brand = {
   seo: {
     title: "Book Intercity Bus Tickets in Cameroon",
     description:
-      "Reserve your seat online, pay with MTN Mobile Money or Orange Money and travel with a verified digital ticket. Daily coach departures across Cameroon.",
+      "Reserve your seat online, pay with MTN Mobile Money or Orange Money and travel with a verified digital ticket. Daily bus departures across Cameroon.",
     keywords: [
       "bus tickets Cameroon",
       "Bamenda to Yaounde bus",
@@ -25,7 +25,6 @@ export const brand = {
   },
 
   hero: {
-    eyebrow: "Intercity coach travel",
     title: "Travel Cameroon in comfort, booked in minutes.",
     subtitle:
       "Choose your seat, pay securely with Mobile Money and board with a verified digital ticket. No queues, no guesswork.",
@@ -41,7 +40,7 @@ export const brand = {
 
   headOffice: "Commercial Avenue, Bamenda, North West Region, Cameroon",
   about:
-    "A licensed interurban passenger carrier connecting the North West, West, Littoral, Centre and South West regions with scheduled coach services.",
+    "A licensed interurban passenger carrier connecting the North West, West, Littoral, Centre and South West regions with scheduled bus services.",
 
   payments: "MTN Mobile Money and Orange Money",
   boardingMinutes: 30,

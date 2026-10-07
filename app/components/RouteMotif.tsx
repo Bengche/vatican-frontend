@@ -37,7 +37,14 @@ export default function RouteMotif({ className = "" }: { className?: string }) {
           strokeWidth="1.5"
         />
       ))}
-      <circle cx="536" cy="72" r="14" fill="var(--brand-primary)" stroke="var(--brand-accent)" strokeWidth="1.5" />
+      <circle
+        cx="536"
+        cy="72"
+        r="14"
+        fill="var(--brand-primary)"
+        stroke="var(--brand-accent)"
+        strokeWidth="1.5"
+      />
       <circle cx="536" cy="72" r="4.5" fill="var(--brand-accent)" />
     </svg>
   );

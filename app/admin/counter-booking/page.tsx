@@ -208,7 +208,7 @@ function CounterSales() {
           <form onSubmit={issue} noValidate className="space-y-5">
             {seats.length === 0 ? (
               <div className="card p-8 text-center text-sm text-slate-500">
-                Select seats on the coach to enter passenger details.
+                Select seats on the bus to enter passenger details.
               </div>
             ) : (
               <>
