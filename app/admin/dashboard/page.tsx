@@ -5,6 +5,7 @@ import Link from "next/link";
 import PageHeader from "../../components/PageHeader";
 import { api, errorMessage } from "@/lib/api";
 import { formatDate, formatTime, formatXAF } from "@/lib/format";
+import { isAdmin, useUser } from "@/lib/auth";
 
 type Period = "today" | "week" | "month" | "custom";
 
@@ -41,6 +42,8 @@ const PERIODS: { key: Period; label: string }[] = [
 ];
 
 export default function AdminOverviewPage() {
+  const user = useUser();
+  const [failedPayouts, setFailedPayouts] = useState(0);
   const [period, setPeriod] = useState<Period>("today");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -90,6 +93,19 @@ export default function AdminOverviewPage() {
       active = false;
     };
   }, [ready, key, period, startDate, endDate]);
+
+  const admin = isAdmin(user);
+  useEffect(() => {
+    if (!admin) return;
+    let active = true;
+    api
+      .get("/admin/payouts/summary")
+      .then(({ data }) => active && setFailedPayouts(Number(data.failed || 0)))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [admin]);
 
   const kpis = [
     {
@@ -160,6 +176,15 @@ export default function AdminOverviewPage() {
       {error && (
         <div className="alert alert-error mb-6" role="alert">
           {error}
+        </div>
+      )}
+
+      {failedPayouts > 0 && (
+        <div className="alert alert-error mb-6" role="alert">
+          {failedPayouts} payout{failedPayouts === 1 ? "" : "s"} failed and need attention.{" "}
+          <Link href="/admin/payouts" className="font-semibold underline">
+            Review payouts
+          </Link>
         </div>
       )}
 

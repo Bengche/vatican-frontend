@@ -33,6 +33,11 @@ export default function SiteFooter() {
                 </Link>
               </li>
               <li>
+                <Link href="/bus" className="hover:text-white">
+                  Bus routes
+                </Link>
+              </li>
+              <li>
                 <Link href="/#terminals" className="hover:text-white">
                   Terminals
                 </Link>
@@ -66,6 +71,16 @@ export default function SiteFooter() {
                   {brand.support.email}
                 </a>
               </li>
+              <li>
+                <a
+                  href={`https://wa.me/${brand.support.whatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-white"
+                >
+                  Chat on WhatsApp
+                </a>
+              </li>
               <li className="text-slate-400">{brand.support.hours}</li>
               <li className="text-slate-400">{brand.headOffice}</li>
             </ul>
@@ -77,7 +92,11 @@ export default function SiteFooter() {
             &copy; {new Date().getFullYear()} {brand.legalName}. All rights
             reserved.
           </p>
-          <p>Payments by {brand.payments}</p>
+          <p className="flex flex-wrap gap-x-5 gap-y-1">
+            <Link href="/terms" className="hover:text-white">Terms</Link>
+            <Link href="/privacy" className="hover:text-white">Privacy</Link>
+            <Link href="/refund-policy" className="hover:text-white">Refund policy</Link>
+          </p>
         </div>
       </div>
     </footer>

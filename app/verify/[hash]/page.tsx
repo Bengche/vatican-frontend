@@ -5,7 +5,14 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Logo from "../../components/Logo";
 import { api, errorMessage } from "@/lib/api";
-import { formatDate, formatTime, shiftLabel } from "@/lib/format";
+import { isStaff, useUser } from "@/lib/auth";
+import {
+  formatDate,
+  formatDateTime,
+  formatTime,
+  shiftLabel,
+  todayInCameroon,
+} from "@/lib/format";
 
 interface Ticket {
   booking_ref: string;
@@ -20,6 +27,8 @@ interface Ticket {
   travel_shift: string;
   bus_number: string;
   bus_type?: string;
+  boarded?: boolean;
+  boarded_at?: string | null;
   passengers: {
     seat_label: string;
     passenger_name: string;
@@ -37,6 +46,25 @@ type State =
 export default function VerifyTicketPage() {
   const { hash } = useParams<{ hash: string }>();
   const [state, setState] = useState<State>({ status: "loading" });
+  const user = useUser();
+  const staff = isStaff(user);
+  const [boarding, setBoarding] = useState(false);
+  const [justBoarded, setJustBoarded] = useState(false);
+  const [boardError, setBoardError] = useState("");
+
+  const markBoarded = async () => {
+    setBoarding(true);
+    setBoardError("");
+    try {
+      const { data } = await api.get("/admin/gate/lookup", { params: { q: hash } });
+      await api.post(`/admin/gate/check-in/${data.booking.booking_id}`);
+      setJustBoarded(true);
+    } catch (err) {
+      setBoardError(errorMessage(err, "We could not mark this passenger as boarded."));
+    } finally {
+      setBoarding(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -137,6 +165,19 @@ export default function VerifyTicketPage() {
               </p>
             </div>
 
+            {(state.ticket.boarded || justBoarded) && (
+              <div className="bg-amber-50 px-6 py-3 text-center text-sm font-semibold text-amber-800">
+                {justBoarded
+                  ? "Marked as boarded just now."
+                  : `Already boarded ${formatDateTime(state.ticket.boarded_at)}.`}
+              </div>
+            )}
+            {state.ticket.travel_date !== todayInCameroon() && (
+              <div className="bg-amber-50 px-6 py-3 text-center text-sm font-semibold text-amber-800">
+                This ticket is for {formatDate(state.ticket.travel_date)}, not today.
+              </div>
+            )}
+
             <div className="p-6">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
@@ -230,6 +271,24 @@ export default function VerifyTicketPage() {
                 Confirm each passenger&apos;s identity document matches the name
                 above.
               </p>
+
+              {staff && !state.ticket.boarded && !justBoarded && (
+                <div className="mt-5">
+                  {boardError && (
+                    <div className="alert alert-error mb-3" role="alert">
+                      {boardError}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="btn btn-primary w-full"
+                    onClick={markBoarded}
+                    disabled={boarding}
+                  >
+                    {boarding ? "Saving..." : "Mark as boarded"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

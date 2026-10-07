@@ -25,12 +25,25 @@ export interface Trip {
   toParkName: string;
 }
 
+export interface RoutePage {
+  fromCity: string;
+  toCity: string;
+  slug: string;
+  minPrice: number | null;
+  upcomingTrips: number;
+  fromParkId: string | number;
+  toParkId: string | number;
+  fromParks: string[];
+  toParks: string[];
+}
+
 export interface Seat {
   id: string | number;
   seatLabel: string;
   rowNum: number;
   colNum: number;
   isAisle: boolean;
+  isWindow?: boolean;
   isBooked: boolean;
   isCounterBooking?: boolean;
   passengerGender?: string | null;

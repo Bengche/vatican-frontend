@@ -107,14 +107,21 @@ export default function SchedulesPage() {
   };
 
   const cancel = async (trip: AdminTrip) => {
+    const paid = Number(trip.booked_seats) > 0;
+    const route = `${formatTime(trip.departure_time)} departure from ${trip.origin_city} to ${trip.destination_city}`;
     if (
       !window.confirm(
-        `Withdraw the ${formatTime(trip.departure_time)} departure from ${trip.origin_city} to ${trip.destination_city}?`,
+        paid
+          ? `Withdraw the ${route}? ${Number(trip.booked_seats)} seat(s) are already paid. Every passenger will be refunded in full (fare and fees) and notified by email.`
+          : `Withdraw the ${route}?`,
       )
     )
       return;
     try {
-      await api.patch(`/admin/trips/${trip.id}/cancel`);
+      const { data } = await api.patch(`/admin/trips/${trip.id}/cancel`, {
+        refundAll: paid,
+      });
+      setMessage({ type: "success", text: data.message });
       await loadTrips();
     } catch (err) {
       setMessage({

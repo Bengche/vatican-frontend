@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
-import { isAdmin, signOut, useUser } from "@/lib/auth";
+import { isStaff, signOut, useUser } from "@/lib/auth";
+import { homeFor, isAdminRole } from "@/lib/roles";
 import { requestInstall, useInstall } from "@/lib/pwa";
 
 interface NavLink {
@@ -34,7 +35,9 @@ export default function SiteHeader() {
   const profileRef = useRef<HTMLDivElement>(null);
 
   const links = user ? MEMBER_LINKS : MARKETING_LINKS;
-  const admin = isAdmin(user);
+  const admin = isStaff(user);
+  const consoleHref = homeFor(user?.role);
+  const consoleLabel = isAdminRole(user?.role) ? "Admin console" : "Staff console";
   const displayName = user?.name || user?.phone_number || "Account";
   const initials = displayName
     .split(/\s+/)
@@ -88,10 +91,10 @@ export default function SiteHeader() {
           ))}
           {admin && (
             <Link
-              href="/admin/dashboard"
+              href={consoleHref}
               className="ml-1 rounded-lg px-3.5 py-2 text-sm font-semibold text-accent transition hover:bg-white/5"
             >
-              Admin console
+              {consoleLabel}
             </Link>
           )}
         </nav>
@@ -138,11 +141,11 @@ export default function SiteHeader() {
                   </Link>
                   {admin && (
                     <Link
-                      href="/admin/dashboard"
+                      href={consoleHref}
                       onClick={() => setProfileOpen(false)}
                       className="block px-4 py-2.5 text-sm font-semibold text-accent-dark hover:bg-slate-50"
                     >
-                      Admin console
+                      {consoleLabel}
                     </Link>
                   )}
                   {canInstall && (
@@ -221,11 +224,11 @@ export default function SiteHeader() {
             ))}
             {admin && (
               <Link
-                href="/admin/dashboard"
+                href={consoleHref}
                 onClick={() => setMenuOpen(false)}
                 className="rounded-lg px-3 py-3 text-base font-semibold text-accent"
               >
-                Admin console
+                {consoleLabel}
               </Link>
             )}
           </nav>

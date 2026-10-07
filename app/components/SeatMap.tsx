@@ -138,10 +138,151 @@ export default function SeatMap({
   }
 
   const chosen = seats.filter((seat) => selected.includes(seat.id));
-  const columns = Math.max(...seats.map((s) => s.colNum), 6);
-  const ordered = [...seats].sort(
-    (a, b) => a.rowNum - b.rowNum || a.colNum - b.colNum,
-  );
+  const describe = (seat: Seat) =>
+    `${seat.seatLabel.replace(/^S/, "")}${seat.isWindow ? " (window)" : ""}`;
+  const rows = [...seats]
+    .sort((a, b) => a.rowNum - b.rowNum || a.colNum - b.colNum)
+    .reduce<Seat[][]>((acc, seat) => {
+      const last = acc[acc.length - 1];
+      if (last && last[0].rowNum === seat.rowNum) last.push(seat);
+      else acc.push([seat]);
+      return acc;
+    }, []);
+
+  const seatButton = (seat: Seat, style?: React.CSSProperties) => {
+    const isSelected = selected.includes(seat.id);
+    const state = seat.isBooked
+      ? "taken"
+      : isSelected
+        ? "selected"
+        : "available";
+    const bar = seat.isBooked
+      ? "bg-slate-300"
+      : isSelected
+        ? "bg-white/70"
+        : "bg-accent";
+    return (
+      <button
+        key={seat.id}
+        type="button"
+        style={style}
+        onClick={() => toggle(seat)}
+        aria-pressed={isSelected}
+        aria-label={`Seat ${seat.seatLabel.replace(/^S/, "")}${seat.isWindow ? ", window" : ""}, ${state}`}
+        title={seat.isWindow ? "Window seat" : undefined}
+        className={`relative flex aspect-square min-h-10 items-center justify-center rounded-lg border text-[11px] font-bold transition active:scale-95 ${
+          seat.isBooked
+            ? "cursor-pointer border-slate-200 bg-slate-200 text-slate-400 hover:bg-slate-300"
+            : isSelected
+              ? "border-primary bg-primary text-white shadow-md"
+              : "border-slate-300 bg-white text-slate-700 hover:border-primary hover:text-primary"
+        }`}
+      >
+        {seat.isWindow && (
+          <span
+            aria-hidden
+            className={`absolute inset-y-1.5 w-1 rounded-full ${bar} ${seat.colNum === 1 ? "left-1" : "right-1"}`}
+          />
+        )}
+        {seat.seatLabel.replace(/^S/, "")}
+        {seat.isBooked && (
+          <span
+            aria-hidden
+            className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-primary/60"
+          />
+        )}
+      </button>
+    );
+  };
+
+  const renderRow = (row: Seat[]) => {
+    const isBench = row.every((seat) => !seat.isAisle);
+    if (isBench) {
+      // Back seats have no aisle and are centred, so a short row never looks lopsided.
+      return (
+        <div key={row[0].rowNum} className="flex justify-center gap-2">
+          {row.map((seat) =>
+            seatButton(seat, { width: "calc((100% - 2.5rem) / 6)" }),
+          )}
+        </div>
+      );
+    }
+
+    const cells: React.ReactNode[] = [];
+    for (let i = 0; i < row.length; i += 1) {
+      const seat = row[i];
+      const place = (span = 1): React.CSSProperties => ({
+        gridColumn: `${seat.colNum} / span ${span}`,
+      });
+
+      if (seat.seatLabel === "DOOR") {
+        let span = 1;
+        while (row[i + span]?.seatLabel === "DOOR") span += 1;
+        i += span - 1;
+        cells.push(
+          <div
+            key={seat.id}
+            style={place(span)}
+            aria-label="Door"
+            className="flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 bg-slate-100 text-[10px] font-bold uppercase tracking-wider text-slate-500"
+          >
+            <svg
+              className="h-3.5 w-3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <path d="M6 3h9a1 1 0 011 1v17H6V3zm10 9h3m-1.5-1.5L19 12l-1.5 1.5M12 12h.01" />
+            </svg>
+            Door
+          </div>,
+        );
+      } else if (seat.seatLabel === "DRIVER") {
+        cells.push(
+          <div
+            key={seat.id}
+            style={place()}
+            aria-label="Driver seat, not available"
+            className="flex aspect-square min-h-10 flex-col items-center justify-center rounded-lg border border-slate-300 bg-slate-100 text-slate-500"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <circle cx="12" cy="12" r="9" />
+              <circle cx="12" cy="12" r="2.5" />
+              <path d="M12 14.5V21M3.5 10.5L9.5 12M20.5 10.5L14.5 12" />
+            </svg>
+            <span className="mt-0.5 text-[8px] font-bold uppercase tracking-wider">
+              Driver
+            </span>
+          </div>,
+        );
+      } else if (seat.isAisle) {
+        cells.push(<div key={seat.id} style={place()} aria-hidden />);
+      } else {
+        cells.push(seatButton(seat, place()));
+      }
+    }
+
+    return (
+      <div
+        key={row[0].rowNum}
+        className="grid gap-2"
+        style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))" }}
+      >
+        {cells}
+      </div>
+    );
+  };
 
   return (
     <div className="card mx-auto max-w-md overflow-hidden">
@@ -163,6 +304,12 @@ export default function SeatMap({
               <b className="absolute right-0.5 top-0.5 h-1 w-1 rounded-full bg-primary/60" />
             </i>
             Taken
+          </span>
+          <span className="flex items-center gap-2">
+            <i className="relative h-4 w-4 rounded-md border border-slate-300 bg-white">
+              <b className="absolute inset-y-0.5 left-0.5 w-0.5 rounded-full bg-accent" />
+            </i>
+            Window
           </span>
         </div>
 
@@ -194,58 +341,14 @@ export default function SeatMap({
 
       <div className="bg-slate-50 p-4 sm:p-6">
         <div className="mx-auto max-w-xs rounded-t-[2.5rem] rounded-b-2xl border border-slate-300 bg-white px-4 pb-5 pt-4">
-          <div className="mb-4 flex items-center justify-between border-b border-dashed border-slate-200 pb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            <span>Front</span>
-            <span className="flex items-center gap-1.5">
-              Driver
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                viewBox="0 0 24 24"
-              >
-                <circle cx="12" cy="12" r="9" />
-                <circle cx="12" cy="12" r="2.5" />
-                <path d="M12 14.5V21M3.5 10.5L9.5 12M20.5 10.5L14.5 12" />
-              </svg>
-            </span>
+          <div className="mb-4 border-b border-dashed border-slate-200 pb-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Front
           </div>
 
-          <div
-            className="grid gap-2"
-            style={{
-              gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-            }}
-          >
-            {ordered.map((seat) => {
-              if (seat.isAisle) return <div key={seat.id} aria-hidden />;
-              const isSelected = selected.includes(seat.id);
-              return (
-                <button
-                  key={seat.id}
-                  type="button"
-                  onClick={() => toggle(seat)}
-                  aria-pressed={isSelected}
-                  aria-label={`Seat ${seat.seatLabel} ${seat.isBooked ? "taken" : isSelected ? "selected" : "available"}`}
-                  className={`flex aspect-square min-h-10 items-center justify-center rounded-lg border text-[11px] font-bold transition active:scale-95 ${
-                    seat.isBooked
-                      ? "relative cursor-pointer border-slate-200 bg-slate-200 text-slate-400 hover:bg-slate-300"
-                      : isSelected
-                        ? "border-primary bg-primary text-white shadow-md"
-                        : "border-slate-300 bg-white text-slate-700 hover:border-primary hover:text-primary"
-                  }`}
-                >
-                  {seat.seatLabel.replace(/^S/, "")}
-                  {seat.isBooked && (
-                    <span
-                      aria-hidden
-                      className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-primary/60"
-                    />
-                  )}
-                </button>
-              );
-            })}
+          <div className="space-y-2">{rows.map(renderRow)}</div>
+
+          <div className="mt-4 border-t border-dashed border-slate-200 pt-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Rear
           </div>
         </div>
       </div>
@@ -309,7 +412,7 @@ export default function SeatMap({
             </p>
             {chosen.length > 0 && (
               <p className="truncate text-xs text-slate-500">
-                {chosen.map((s) => s.seatLabel).join(", ")}
+                {chosen.map(describe).join(", ")}
               </p>
             )}
           </div>

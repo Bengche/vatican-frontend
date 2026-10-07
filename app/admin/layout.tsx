@@ -4,29 +4,43 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Logo from "../components/Logo";
-import { isAdmin, signOut, useUser } from "@/lib/auth";
+import { api } from "@/lib/api";
+import { isAdmin, isStaff, signOut, useUser } from "@/lib/auth";
+import { ROLE_LABELS, canVisit, homeFor } from "@/lib/roles";
 
 const ICONS = {
   overview: "M4 13h6V4H4v9zm0 7h6v-5H4v5zm10 0h6V11h-6v9zm0-16v5h6V4h-6z",
+  bookings:
+    "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 5a2 2 0 002 2h2a2 2 0 002-2m-6 9l2 2 4-4",
   counter:
     "M3 8a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 100 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 100-4V8zm12-2v12",
+  cash: "M3 7a2 2 0 012-2h13v4M3 7v11a2 2 0 002 2h14a1 1 0 001-1v-9a1 1 0 00-1-1H5a2 2 0 01-2-2zm14 7h.01",
+  boarding: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
   schedule:
     "M8 3v3m8-3v3M4 9h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z",
   fleet: "M4 6h16v9H4V6zm0 5h16M7 18.5h.01M17 18.5h.01M6 15v3m12-3v3",
   terminals:
     "M5 21V5a1 1 0 011-1h8a1 1 0 011 1v16m0 0h4V10a1 1 0 00-1-1h-3M9 8h2m-2 4h2m-2 4h2",
+  payouts: "M3 7h18v10H3V7zm9 7a2 2 0 100-4 2 2 0 000 4zM6 10h.01M18 14h.01",
+  staff:
+    "M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75",
 };
 
 const NAV = [
   { label: "Overview", href: "/admin/dashboard", icon: ICONS.overview },
+  { label: "Bookings", href: "/admin/bookings", icon: ICONS.bookings },
   {
     label: "Counter sales",
     href: "/admin/counter-booking",
     icon: ICONS.counter,
   },
+  { label: "Cash", href: "/admin/cash", icon: ICONS.cash },
+  { label: "Boarding", href: "/admin/boarding", icon: ICONS.boarding },
   { label: "Departures", href: "/admin/schedules", icon: ICONS.schedule },
   { label: "Fleet and notices", href: "/admin/fleet", icon: ICONS.fleet },
   { label: "Terminals", href: "/admin/agencies", icon: ICONS.terminals },
+  { label: "Payouts", href: "/admin/payouts", icon: ICONS.payouts },
+  { label: "Staff", href: "/admin/staff", icon: ICONS.staff },
 ];
 
 export default function AdminLayout({
@@ -38,23 +52,50 @@ export default function AdminLayout({
   const router = useRouter();
   const user = useUser();
   const [open, setOpen] = useState(false);
+  const [payoutAlerts, setPayoutAlerts] = useState(0);
+
+  const allowed = isStaff(user) && canVisit(user?.role, pathname);
+  const admin = isAdmin(user);
 
   useEffect(() => {
-    if (user !== undefined && !isAdmin(user)) router.replace("/dashboard");
-  }, [user, router]);
+    if (user === undefined) return;
+    if (!isStaff(user)) router.replace("/dashboard");
+    else if (!canVisit(user?.role, pathname))
+      router.replace(homeFor(user?.role));
+  }, [user, pathname, router]);
 
+  useEffect(() => {
+    if (!admin) return;
+    let active = true;
+    api
+      .get("/admin/payouts/summary")
+      .then(({ data }) => {
+        if (active)
+          setPayoutAlerts(Number(data.failed || 0) + Number(data.stuck || 0));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [admin, pathname]);
 
-  if (!isAdmin(user)) return <div className="min-h-dvh bg-slate-50" />;
+  if (!allowed) return <div className="min-h-dvh bg-slate-50" />;
+
+  const items = NAV.filter((item) => canVisit(user?.role, item.href));
+  const consoleName = admin ? "Admin console" : "Staff console";
 
   const sidebar = (
     <div className="flex h-full flex-col">
       <div className="px-5 py-5">
-        <Link href="/admin/dashboard">
-          <Logo subtitle="Admin console" />
+        <Link href={homeFor(user?.role)}>
+          <Logo subtitle={consoleName} />
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 px-3" aria-label="Admin">
-        {NAV.map((item) => {
+      <nav
+        className="flex-1 space-y-1 overflow-y-auto px-3"
+        aria-label={consoleName}
+      >
+        {items.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
@@ -76,16 +117,21 @@ export default function AdminLayout({
                 <path d={item.icon} />
               </svg>
               {item.label}
+              {item.href === "/admin/payouts" && payoutAlerts > 0 && (
+                <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                  {payoutAlerts}
+                </span>
+              )}
             </Link>
           );
         })}
       </nav>
       <div className="border-t border-white/10 p-4">
         <p className="truncate text-sm font-semibold text-white">
-          {user?.name || "Administrator"}
+          {user?.name || "Staff"}
         </p>
         <p className="truncate text-xs text-slate-400">
-          {user?.email || user?.phone_number}
+          {ROLE_LABELS[user?.role ?? ""] ?? user?.email ?? user?.phone_number}
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <Link

@@ -505,7 +505,16 @@ export default function Checkout({ trip, seats, onBack, onReset }: Props) {
           Change seats
         </button>
         <p className="mt-4 text-center text-[11px] leading-relaxed text-slate-500">
-          Seats are held for 5 minutes once you start the payment.
+          Seats are held for 5 minutes once you start the payment. By paying you
+          accept our{" "}
+          <Link href="/terms" className="font-semibold text-primary hover:underline">
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link href="/refund-policy" className="font-semibold text-primary hover:underline">
+            Refund policy
+          </Link>
+          .
         </p>
       </aside>
     </form>

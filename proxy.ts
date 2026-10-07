@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { canVisit, homeFor, isStaffRole } from "@/lib/roles";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/my-bookings", "/admin"];
 const AUTH_ROUTES = ["/login", "/register"];
-const ADMIN_ROLES = ["agency_admin", "super_admin"];
 
 function readSession(token?: string): { valid: boolean; role: string } {
   if (!token) return { valid: false, role: "passenger" };
@@ -42,16 +42,18 @@ export function proxy(request: NextRequest) {
 
   if (
     (pathname === "/admin" || pathname.startsWith("/admin/")) &&
-    !ADMIN_ROLES.includes(session.role)
+    !(isStaffRole(session.role) && canVisit(session.role, pathname))
   ) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(new URL(homeFor(session.role), request.url));
   }
 
   if (isAuthRoute && session.valid) {
     const redirect = request.nextUrl.searchParams.get("redirect");
     return NextResponse.redirect(
       new URL(
-        redirect && redirect.startsWith("/") ? redirect : "/dashboard",
+        redirect && redirect.startsWith("/") && !redirect.startsWith("//")
+          ? redirect
+          : homeFor(session.role),
         request.url,
       ),
     );

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import AuthShell from "../components/AuthShell";
 import { api, errorMessage } from "@/lib/api";
 import { setSession } from "@/lib/auth";
+import { homeFor } from "@/lib/roles";
 
 function LoginForm() {
   const router = useRouter();
@@ -17,6 +18,7 @@ function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
 
   const registered = params.get("registered") === "true";
+  const passwordReset = params.get("reset") === "true";
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -37,7 +39,7 @@ function LoginForm() {
       router.replace(
         redirect && redirect.startsWith("/") && !redirect.startsWith("//")
           ? redirect
-          : "/dashboard",
+          : homeFor(data.user?.role),
       );
     } catch (err) {
       setError(
@@ -52,6 +54,11 @@ function LoginForm() {
       {registered && (
         <div className="alert alert-success">
           Your account is ready. Sign in to continue.
+        </div>
+      )}
+      {passwordReset && (
+        <div className="alert alert-success">
+          Your password has been changed. Sign in with the new password.
         </div>
       )}
       {error && (
@@ -76,9 +83,17 @@ function LoginForm() {
       </div>
 
       <div>
-        <label htmlFor="password" className="label">
-          Password
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="password" className="label mb-0">
+            Password
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-xs font-semibold text-primary hover:underline"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <div className="relative">
           <input
             id="password"

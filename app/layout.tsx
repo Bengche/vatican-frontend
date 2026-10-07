@@ -4,6 +4,7 @@ import { Newsreader, Public_Sans } from "next/font/google";
 import { brand } from "@/config/brand";
 import "./globals.css";
 import PwaProvider from "./components/PwaProvider";
+import WhatsAppButton from "./components/WhatsAppButton";
 
 const sans = Public_Sans({
   variable: "--font-body",
@@ -33,6 +34,7 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
   },
   formatDetection: { telephone: false },
+  twitter: { card: "summary_large_image" },
   openGraph: {
     title: `${brand.name} | ${brand.seo.title}`,
     description: brand.seo.description,
@@ -71,6 +73,7 @@ export default function RootLayout({
       <body className="flex min-h-dvh flex-col">
         {children}
         <PwaProvider />
+        <WhatsAppButton />
       </body>
     </html>
   );

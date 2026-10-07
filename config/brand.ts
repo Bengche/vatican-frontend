@@ -45,6 +45,14 @@ export const brand = {
     "A licensed interurban passenger carrier connecting the North West, West, Littoral, Centre and South West regions with scheduled bus services.",
 
   payments: "MTN Mobile Money and Orange Money",
+
+  // Share of the base fare returned on a cancellation. Keep in step with backend/src/config/brand.js.
+  refundPolicy: {
+    fullRefundHours: 24,
+    partialRefundHours: 6,
+    partialPercent: 50,
+  },
+  legalUpdated: "October 2026",
   boardingMinutes: 30,
   currency: "XAF",
 

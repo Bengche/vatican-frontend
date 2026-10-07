@@ -7,7 +7,7 @@ import RouteMotif from "./components/RouteMotif";
 import { brand } from "@/config/brand";
 import { fetchPublic } from "@/lib/server";
 import { formatDate, formatTime, formatXAF } from "@/lib/format";
-import type { Park, Trip } from "@/lib/types";
+import type { Park, RoutePage, Trip } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: { absolute: `${brand.name} | ${brand.seo.title}` },
@@ -53,12 +53,14 @@ const FEATURES = [
 ];
 
 export default async function HomePage() {
-  const [parksData, tripsData] = await Promise.all([
+  const [parksData, tripsData, routesData] = await Promise.all([
     fetchPublic<{ parks: Park[] }>("/parks", 300),
     fetchPublic<{ trips: Trip[] }>("/trips/upcoming?limit=6", 60),
+    fetchPublic<{ routes: RoutePage[] }>("/route-pages", 600),
   ]);
   const parks = parksData?.parks ?? [];
   const trips = tripsData?.trips ?? [];
+  const routes = (routesData?.routes ?? []).slice(0, 12);
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -229,6 +231,28 @@ export default async function HomePage() {
             </div>
           )}
         </section>
+
+        {routes.length > 0 && (
+          <section className="mx-auto max-w-7xl px-4 pb-4 sm:px-6 lg:px-8">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <h2 className="text-lg font-bold text-slate-900">Popular routes</h2>
+              <Link href="/bus" className="text-sm font-semibold text-primary hover:underline">
+                All routes &rarr;
+              </Link>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {routes.map((route) => (
+                <Link
+                  key={route.slug}
+                  href={`/bus/${route.slug}`}
+                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-primary hover:text-primary"
+                >
+                  {route.fromCity} to {route.toCity}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* How it works */}
         <section

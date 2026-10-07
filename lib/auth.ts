@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isAdminRole, isStaffRole } from "./roles";
 
 export interface SessionUser {
   id: number | string;
@@ -10,9 +11,8 @@ export interface SessionUser {
   role?: string;
 }
 
-const ADMIN_ROLES = ["agency_admin", "super_admin"];
-export const isAdmin = (user?: SessionUser | null) =>
-  Boolean(user?.role && ADMIN_ROLES.includes(user.role));
+export const isAdmin = (user?: SessionUser | null) => isAdminRole(user?.role);
+export const isStaff = (user?: SessionUser | null) => isStaffRole(user?.role);
 
 export const getToken = (): string | null =>
   typeof window === "undefined" ? null : localStorage.getItem("token");
