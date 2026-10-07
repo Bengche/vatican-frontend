@@ -43,6 +43,12 @@ export function clearSession() {
   window.dispatchEvent(new Event("session-change"));
 }
 
+/** Ends the session and loads the login page from scratch so no protected page stays cached. */
+export function signOut() {
+  clearSession();
+  window.location.replace(`${window.location.origin}/login`);
+}
+
 /** Current user; `undefined` until the browser storage has been read. */
 export function useUser(): SessionUser | null | undefined {
   const [user, setUser] = useState<SessionUser | null | undefined>(undefined);

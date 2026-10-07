@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Logo from "./Logo";
-import { clearSession, isAdmin, useUser } from "@/lib/auth";
+import { isAdmin, signOut, useUser } from "@/lib/auth";
 
 interface NavLink {
   label: string;
@@ -18,24 +18,20 @@ const MARKETING_LINKS: NavLink[] = [
   { label: "Contact", href: "/#contact" },
 ];
 
-const PORTAL_LINKS: NavLink[] = [
+const MEMBER_LINKS: NavLink[] = [
+  { label: "Home", href: "/" },
   { label: "Book a trip", href: "/dashboard" },
   { label: "My tickets", href: "/my-bookings" },
 ];
 
-export default function SiteHeader({
-  variant = "portal",
-}: {
-  variant?: "marketing" | "portal";
-}) {
+export default function SiteHeader() {
   const pathname = usePathname();
-  const router = useRouter();
   const user = useUser();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const links = variant === "marketing" ? MARKETING_LINKS : PORTAL_LINKS;
+  const links = user ? MEMBER_LINKS : MARKETING_LINKS;
   const admin = isAdmin(user);
   const displayName = user?.name || user?.phone_number || "Account";
   const initials = displayName
@@ -57,23 +53,20 @@ export default function SiteHeader({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, []);
 
-  const signOut = () => {
-    clearSession();
+  const handleSignOut = () => {
     setProfileOpen(false);
     setMenuOpen(false);
-    router.replace("/login");
+    signOut();
   };
 
   const isActive = (href: string) =>
-    !href.includes("#") && pathname.startsWith(href);
+    !href.includes("#") &&
+    (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-primary">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Link
-          href={user ? (variant === "portal" ? "/dashboard" : "/") : "/"}
-          aria-label="Home"
-        >
+        <Link href="/" aria-label="Home">
           <Logo />
         </Link>
 
@@ -152,7 +145,7 @@ export default function SiteHeader({
                   )}
                   <button
                     type="button"
-                    onClick={signOut}
+                    onClick={handleSignOut}
                     className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-sm font-medium text-red-600 hover:bg-red-50"
                   >
                     Sign out
@@ -235,7 +228,7 @@ export default function SiteHeader({
                 </div>
                 <button
                   type="button"
-                  onClick={signOut}
+                  onClick={handleSignOut}
                   className="btn btn-sm border border-white/20 text-white hover:bg-white/10"
                 >
                   Sign out

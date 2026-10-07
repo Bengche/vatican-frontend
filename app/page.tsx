@@ -78,7 +78,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <SiteHeader variant="marketing" />
+      <SiteHeader />
       <main>
         <script
           type="application/ld+json"

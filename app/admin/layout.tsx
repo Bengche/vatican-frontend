@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Logo from "../components/Logo";
-import { clearSession, isAdmin, useUser } from "@/lib/auth";
+import { isAdmin, signOut, useUser } from "@/lib/auth";
 
 const ICONS = {
   overview: "M4 13h6V4H4v9zm0 7h6v-5H4v5zm10 0h6V11h-6v9zm0-16v5h6V4h-6z",
@@ -43,10 +43,6 @@ export default function AdminLayout({
     if (user !== undefined && !isAdmin(user)) router.replace("/dashboard");
   }, [user, router]);
 
-  const signOut = () => {
-    clearSession();
-    router.replace("/login");
-  };
 
   if (!isAdmin(user)) return <div className="min-h-dvh bg-slate-50" />;
 
