@@ -5,6 +5,7 @@ export const brand = {
   name: "Vatican Express",
   legalName: "Vatican Express Co. Ltd",
   monogram: "VE",
+  shortName: "Vatican",
   descriptor: "Intercity Bus Travel",
   tagline: "Intercity Travel across Cameroon",
   siteUrl: (

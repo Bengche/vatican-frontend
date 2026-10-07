@@ -112,7 +112,7 @@ export default function AdminLayout({
         {sidebar}
       </aside>
 
-      <div className="sticky top-0 z-40 flex h-14 items-center justify-between bg-primary px-4 lg:hidden">
+      <div className="sticky top-0 z-40 flex min-h-[calc(3.5rem+env(safe-area-inset-top))] items-center justify-between bg-primary px-4 pt-[env(safe-area-inset-top)] lg:hidden">
         <Logo subtitle="" />
         <button
           type="button"
@@ -145,7 +145,7 @@ export default function AdminLayout({
             className="absolute inset-0 bg-slate-900/60"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[85%] bg-primary shadow-2xl">
+          <div className="absolute inset-y-0 left-0 w-72 max-w-[85%] bg-primary pt-[env(safe-area-inset-top)] shadow-2xl">
             {sidebar}
           </div>
         </div>

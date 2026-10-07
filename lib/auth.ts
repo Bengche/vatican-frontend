@@ -39,6 +39,10 @@ export function setSession(token: string, user: SessionUser) {
 export function clearSession() {
   localStorage.removeItem("token");
   localStorage.removeItem("user");
+  // Saved offline tickets belong to the signed-in account only.
+  Object.keys(localStorage)
+    .filter((key) => key.startsWith("tickets-cache:"))
+    .forEach((key) => localStorage.removeItem(key));
   document.cookie = "token=; path=/; max-age=0; SameSite=Lax";
   window.dispatchEvent(new Event("session-change"));
 }

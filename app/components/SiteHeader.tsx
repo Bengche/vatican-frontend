@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import { isAdmin, signOut, useUser } from "@/lib/auth";
+import { requestInstall, useInstall } from "@/lib/pwa";
 
 interface NavLink {
   label: string;
@@ -27,6 +28,7 @@ const MEMBER_LINKS: NavLink[] = [
 export default function SiteHeader() {
   const pathname = usePathname();
   const user = useUser();
+  const { canInstall } = useInstall();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -64,7 +66,7 @@ export default function SiteHeader() {
     (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-primary">
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-primary pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <Link href="/" aria-label="Home">
           <Logo />
@@ -143,6 +145,18 @@ export default function SiteHeader() {
                       Admin console
                     </Link>
                   )}
+                  {canInstall && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        void requestInstall();
+                      }}
+                      className="block w-full border-t border-slate-100 px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                    >
+                      Install app
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={handleSignOut}
@@ -215,6 +229,18 @@ export default function SiteHeader() {
               </Link>
             )}
           </nav>
+          {canInstall && (
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                void requestInstall();
+              }}
+              className="mt-2 w-full rounded-lg border border-white/15 px-3 py-3 text-left text-base font-medium text-slate-200"
+            >
+              Install app
+            </button>
+          )}
           <div className="mt-3 border-t border-white/10 pt-4">
             {user === undefined ? null : user ? (
               <div className="flex items-center justify-between gap-3">

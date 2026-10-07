@@ -10,6 +10,7 @@ export function BrandMark({ size = 46, framed = false }: { size?: number; framed
       width={Math.round(size * 1.0875)}
       height={size}
       priority
+      unoptimized
       className="shrink-0"
     />
   );

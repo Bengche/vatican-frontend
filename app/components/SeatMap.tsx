@@ -159,10 +159,37 @@ export default function SeatMap({
             Selected
           </span>
           <span className="flex items-center gap-2">
-            <i className="h-4 w-4 rounded-md bg-slate-200" />
+            <i className="relative h-4 w-4 rounded-md bg-slate-200">
+              <b className="absolute right-0.5 top-0.5 h-1 w-1 rounded-full bg-primary/60" />
+            </i>
             Taken
           </span>
         </div>
+
+        {seats.some((seat) => seat.isBooked && !seat.isAisle) && (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3.5 py-3">
+            <svg
+              className="mt-0.5 h-5 w-5 shrink-0 text-accent-dark"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+              aria-hidden
+            >
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5 20c.6-3.6 3.5-5.5 7-5.5s6.4 1.9 7 5.5" />
+            </svg>
+            <p className="text-xs leading-relaxed text-slate-600">
+              <span className="font-semibold text-slate-900">
+                Know who you sit beside.
+              </span>{" "}
+              Tap any taken seat (marked with a small dot) to see who is
+              travelling there: gender, age group and travel style.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="bg-slate-50 p-4 sm:p-6">
@@ -203,13 +230,19 @@ export default function SeatMap({
                   aria-label={`Seat ${seat.seatLabel} ${seat.isBooked ? "taken" : isSelected ? "selected" : "available"}`}
                   className={`flex aspect-square min-h-10 items-center justify-center rounded-lg border text-[11px] font-bold transition active:scale-95 ${
                     seat.isBooked
-                      ? "border-slate-200 bg-slate-200 text-slate-400"
+                      ? "relative cursor-pointer border-slate-200 bg-slate-200 text-slate-400 hover:bg-slate-300"
                       : isSelected
                         ? "border-primary bg-primary text-white shadow-md"
                         : "border-slate-300 bg-white text-slate-700 hover:border-primary hover:text-primary"
                   }`}
                 >
                   {seat.seatLabel.replace(/^S/, "")}
+                  {seat.isBooked && (
+                    <span
+                      aria-hidden
+                      className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-primary/60"
+                    />
+                  )}
                 </button>
               );
             })}

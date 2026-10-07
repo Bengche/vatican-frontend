@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import PassengerFields from "./PassengerFields";
+import { brand } from "@/config/brand";
 import { api, errorMessage } from "@/lib/api";
 import { getUser } from "@/lib/auth";
 import { downloadTicket } from "@/lib/download";
@@ -450,18 +451,14 @@ export default function Checkout({ trip, seats, onBack, onReset }: Props) {
             </dd>
           </div>
           {quote && (
-            <>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Terminal and service fees</dt>
-                <dd className="font-semibold">
-                  {formatXAF(quote.terminalFee + quote.serviceFee)}
-                </dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-slate-500">Mobile Money fee</dt>
-                <dd className="font-semibold">{formatXAF(quote.gatewayFee)}</dd>
-              </div>
-            </>
+            <div className="flex justify-between">
+              <dt className="text-slate-500">Terminal and service fees</dt>
+              <dd className="font-semibold">
+                {formatXAF(
+                  quote.terminalFee + quote.serviceFee + quote.gatewayFee,
+                )}
+              </dd>
+            </div>
           )}
           <div className="flex justify-between border-t border-slate-200 pt-3 text-base">
             <dt className="font-bold">Total</dt>
@@ -470,6 +467,28 @@ export default function Checkout({ trip, seats, onBack, onReset }: Props) {
             </dd>
           </div>
         </dl>
+
+        <div className="mt-4 flex items-start gap-2.5 rounded-lg border border-accent/40 bg-accent-soft px-3.5 py-3">
+          <svg
+            className="mt-0.5 h-4 w-4 shrink-0 text-accent-dark"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+            aria-hidden
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v5M12 8h.01" />
+          </svg>
+          <p className="text-xs leading-relaxed text-accent-dark">
+            <span className="font-semibold">Mobile Money operator charges.</span>{" "}
+            Your operator (MTN or Orange) applies its own transaction charges
+            when you approve the payment. These are set by the operator, not by{" "}
+            {brand.name}, and are not included in the total above.
+          </p>
+        </div>
 
         <button
           type="submit"

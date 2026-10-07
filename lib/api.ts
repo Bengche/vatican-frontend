@@ -35,6 +35,9 @@ api.interceptors.response.use(
   },
 );
 
+/** True when the request never reached the server (offline or timeout). */
+export const isNetworkError = (error: unknown) => axios.isAxiosError(error) && !error.response;
+
 /** Turns any thrown value into a message that is safe to show to a passenger. */
 export function errorMessage(
   error: unknown,

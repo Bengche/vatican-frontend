@@ -3,30 +3,52 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import TicketCard from "../components/TicketCard";
-import { api, errorMessage } from "@/lib/api";
-import { todayInCameroon } from "@/lib/format";
+import { api, errorMessage, isNetworkError } from "@/lib/api";
+import { getUser } from "@/lib/auth";
+import { formatDateTime, todayInCameroon } from "@/lib/format";
 import type { BookingRecord } from "@/lib/types";
+
+function readSaved(key: string): { savedAt: number; bookings: BookingRecord[] } | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function MyBookingsPage() {
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [savedAt, setSavedAt] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
+    const cacheKey = `tickets-cache:${getUser()?.id ?? "anon"}`;
+
     api
       .get("/users/my-bookings")
-      .then(({ data }) => active && setBookings(data.bookings ?? []))
-      .catch(
-        (err) =>
-          active &&
-          setError(
-            errorMessage(
-              err,
-              "We could not load your tickets. Please try again.",
-            ),
-          ),
-      )
+      .then(({ data }) => {
+        if (!active) return;
+        const list: BookingRecord[] = data.bookings ?? [];
+        setBookings(list);
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ savedAt: Date.now(), bookings: list }));
+        } catch {
+          // Storage can be full or disabled; the live list still works.
+        }
+      })
+      .catch((err) => {
+        if (!active) return;
+        const saved = isNetworkError(err) ? readSaved(cacheKey) : null;
+        if (saved) {
+          setBookings(saved.bookings);
+          setSavedAt(saved.savedAt);
+        } else {
+          setError(errorMessage(err, "We could not load your tickets. Please try again."));
+        }
+      })
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
@@ -59,6 +81,12 @@ export default function MyBookingsPage() {
           Book a trip
         </Link>
       </div>
+
+      {savedAt && (
+        <div className="alert alert-info" role="status">
+          You are offline. Showing the tickets saved on this device on {formatDateTime(new Date(savedAt).toISOString())}.
+        </div>
+      )}
 
       {error && (
         <div className="alert alert-error" role="alert">

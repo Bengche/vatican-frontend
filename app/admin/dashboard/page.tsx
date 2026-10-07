@@ -93,9 +93,9 @@ export default function AdminOverviewPage() {
 
   const kpis = [
     {
-      label: "Total revenue",
+      label: "Agency revenue",
       value: formatXAF(stats.total_revenue),
-      hint: "Confirmed sales",
+      hint: "Mobile Money payouts plus counter cash",
     },
     {
       label: "Tickets sold",
@@ -105,12 +105,12 @@ export default function AdminOverviewPage() {
     {
       label: "Mobile Money",
       value: formatXAF(stats.momo_revenue),
-      hint: "Online sales",
+      hint: "Fare and terminal fee paid to the agency",
     },
     {
       label: "Counter cash",
       value: formatXAF(stats.counter_revenue),
-      hint: "Walk-in sales",
+      hint: "Cash collected at the counter",
     },
   ];
 
@@ -188,7 +188,7 @@ export default function AdminOverviewPage() {
               Terminal performance
             </h2>
             <p className="mt-1 text-xs text-slate-500">
-              Sales by departure terminal for the selected period.
+              Agency revenue by departure terminal for the selected period.
             </p>
           </div>
           <div className="overflow-x-auto">

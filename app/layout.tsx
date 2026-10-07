@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { Newsreader, Public_Sans } from "next/font/google";
 import { brand } from "@/config/brand";
 import "./globals.css";
+import PwaProvider from "./components/PwaProvider";
 
 const sans = Public_Sans({
   variable: "--font-body",
@@ -26,6 +27,12 @@ export const metadata: Metadata = {
   description: brand.seo.description,
   keywords: [...brand.seo.keywords],
   applicationName: brand.name,
+  appleWebApp: {
+    capable: true,
+    title: brand.name,
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
   openGraph: {
     title: `${brand.name} | ${brand.seo.title}`,
     description: brand.seo.description,
@@ -39,6 +46,7 @@ export const viewport: Viewport = {
   themeColor: brand.colors.primary,
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 const brandVariables = {
@@ -60,7 +68,10 @@ export default function RootLayout({
       className={`${sans.variable} ${serif.variable}`}
       style={brandVariables}
     >
-      <body className="flex min-h-dvh flex-col">{children}</body>
+      <body className="flex min-h-dvh flex-col">
+        {children}
+        <PwaProvider />
+      </body>
     </html>
   );
 }
