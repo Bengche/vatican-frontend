@@ -16,6 +16,10 @@ interface AdminPark {
 type Message = { type: "success" | "error"; text: string } | null;
 
 const BUS_TYPES = ["VIP Coaster", "Classic", "Executive"];
+const SEAT_LAYOUTS = [
+  { value: "2+3", label: "2 + 3: five seats per row" },
+  { value: "2+2", label: "2 + 2: four seats per row" },
+];
 
 export default function TerminalsPage() {
   const [parks, setParks] = useState<AdminPark[]>([]);
@@ -29,6 +33,7 @@ export default function TerminalsPage() {
 
   const [busNumber, setBusNumber] = useState("");
   const [busType, setBusType] = useState(BUS_TYPES[0]);
+  const [seatLayout, setSeatLayout] = useState(SEAT_LAYOUTS[0].value);
   const [seatCount, setSeatCount] = useState("70");
   const [busMessage, setBusMessage] = useState<Message>(null);
   const [savingBus, setSavingBus] = useState(false);
@@ -109,6 +114,7 @@ export default function TerminalsPage() {
         parkId,
         busNumber,
         busType,
+        seatLayout,
         totalSeats: Number(seatCount),
       });
       setBusMessage({ type: "success", text: data.message });
@@ -285,8 +291,28 @@ export default function TerminalsPage() {
                   required
                 />
                 <p className="mt-1.5 text-xs text-slate-500">
-                  Seats are laid out two on the left and three on the right of
-                  the walkway.
+                  Includes the seat beside the driver. Doors and the driver seat
+                  are added to the map automatically.
+                </p>
+              </div>
+              <div>
+                <label htmlFor="seatLayout" className="label">
+                  Seat layout
+                </label>
+                <select
+                  id="seatLayout"
+                  className="input"
+                  value={seatLayout}
+                  onChange={(e) => setSeatLayout(e.target.value)}
+                >
+                  {SEAT_LAYOUTS.map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1.5 text-xs text-slate-500">
+                  Seats on the left and right of the walkway in each row.
                 </p>
               </div>
               <button
@@ -323,7 +349,8 @@ export default function TerminalsPage() {
                         {bus.bus_number}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {bus.bus_type} &middot; {bus.total_seats} seats
+                        {bus.bus_type} &middot; {bus.total_seats} seats &middot;{" "}
+                        {bus.seat_layout ?? "2+3"}
                       </p>
                     </div>
                     <button

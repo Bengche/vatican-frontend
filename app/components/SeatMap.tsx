@@ -138,6 +138,7 @@ export default function SeatMap({
   }
 
   const chosen = seats.filter((seat) => selected.includes(seat.id));
+  const columns = Math.max(...seats.map((s) => s.colNum), 1);
   const describe = (seat: Seat) =>
     `${seat.seatLabel.replace(/^S/, "")}${seat.isWindow ? " (window)" : ""}`;
   const rows = [...seats]
@@ -202,7 +203,9 @@ export default function SeatMap({
       return (
         <div key={row[0].rowNum} className="flex justify-center gap-2">
           {row.map((seat) =>
-            seatButton(seat, { width: "calc((100% - 2.5rem) / 6)" }),
+            seatButton(seat, {
+              width: `calc((100% - ${(columns - 1) * 0.5}rem) / ${columns})`,
+            }),
           )}
         </div>
       );
@@ -277,7 +280,7 @@ export default function SeatMap({
       <div
         key={row[0].rowNum}
         className="grid gap-2"
-        style={{ gridTemplateColumns: "repeat(6, minmax(0, 1fr))" }}
+        style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
       >
         {cells}
       </div>
@@ -340,7 +343,9 @@ export default function SeatMap({
       </div>
 
       <div className="bg-slate-50 p-4 sm:p-6">
-        <div className="mx-auto max-w-xs rounded-t-[2.5rem] rounded-b-2xl border border-slate-300 bg-white px-4 pb-5 pt-4">
+        <div
+          className={`mx-auto ${columns === 5 ? "max-w-[17rem]" : "max-w-xs"} rounded-t-[2.5rem] rounded-b-2xl border border-slate-300 bg-white px-4 pb-5 pt-4`}
+        >
           <div className="mb-4 border-b border-dashed border-slate-200 pb-3 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Front
           </div>

@@ -122,4 +122,5 @@ export interface Bus {
   total_seats: number;
   bus_type: string;
   is_active: boolean;
+  seat_layout?: string;
 }
