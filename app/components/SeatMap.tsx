@@ -41,6 +41,22 @@ export default function SeatMap({
   const [inspected, setInspected] = useState<Seat | null>(null);
   const [attempt, setAttempt] = useState(0);
   const selectedRef = useRef(selected);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!inspected) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setInspected(null);
+    };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    closeRef.current?.focus();
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [inspected]);
 
   useEffect(() => {
     selectedRef.current = selected;
@@ -359,46 +375,101 @@ export default function SeatMap({
       </div>
 
       {inspected && (
-        <div className="border-t border-slate-100 bg-slate-900 p-5 text-white">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-sm font-semibold">
-              Seat {inspected.seatLabel} is taken
-            </p>
-            <button
-              type="button"
-              onClick={() => setInspected(null)}
-              className="text-xs text-slate-400 hover:text-white"
-              aria-label="Close"
-            >
-              Close
-            </button>
+        <div
+          className="modal-backdrop fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 backdrop-blur-sm sm:items-center sm:p-4"
+          onClick={() => setInspected(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="seat-modal-title"
+            onClick={(e) => e.stopPropagation()}
+            className="modal-panel flex max-h-[90dvh] w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 bg-slate-50 px-5 py-4">
+              <div className="min-w-0">
+                <p className="eyebrow">Occupied seat</p>
+                <h4
+                  id="seat-modal-title"
+                  className="mt-1 font-display text-xl font-semibold text-slate-900"
+                >
+                  Seat {inspected.seatLabel.replace(/^S/, "")}
+                  {inspected.isWindow ? " · Window" : ""}
+                </h4>
+              </div>
+              <button
+                type="button"
+                ref={closeRef}
+                onClick={() => setInspected(null)}
+                className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+                aria-label="Close"
+              >
+                <svg
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
+                  <path d="M6 6l12 12M18 6L6 18" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-5 py-5">
+              {inspected.isCounterBooking ? (
+                <p className="text-sm leading-relaxed text-slate-600">
+                  This seat was reserved in person at the terminal counter.
+                </p>
+              ) : (
+                <>
+                  <p className="mb-4 text-sm leading-relaxed text-slate-600">
+                    This seat has already been booked. Here is a little about
+                    your future neighbour.
+                  </p>
+                  <dl className="divide-y divide-slate-100 rounded-xl border border-slate-200">
+                    {[
+                      [
+                        "Gender",
+                        inspected.passengerGender || "Passenger",
+                        "capitalize",
+                      ],
+                      ["Age group", AGE_GROUPS(inspected.passengerAge), ""],
+                      [
+                        "Travel style",
+                        VIBE[inspected.discussionPreference || "no_preference"],
+                        "",
+                      ],
+                    ].map(([label, value, extra]) => (
+                      <div
+                        key={label}
+                        className="flex items-center justify-between gap-4 px-4 py-3 text-sm"
+                      >
+                        <dt className="text-slate-500">{label}</dt>
+                        <dd
+                          className={`text-right font-semibold text-slate-900 ${extra}`}
+                        >
+                          {value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </>
+              )}
+            </div>
+
+            <div className="border-t border-slate-100 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4">
+              <button
+                type="button"
+                onClick={() => setInspected(null)}
+                className="btn btn-primary w-full"
+              >
+                Choose another seat
+              </button>
+            </div>
           </div>
-          {inspected.isCounterBooking ? (
-            <p className="mt-2 text-xs leading-relaxed text-slate-300">
-              Reserved in person at the terminal counter.
-            </p>
-          ) : (
-            <dl className="mt-3 grid grid-cols-3 gap-3 text-xs">
-              <div>
-                <dt className="text-slate-400">Gender</dt>
-                <dd className="mt-0.5 font-semibold capitalize">
-                  {inspected.passengerGender || "Passenger"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-slate-400">Age group</dt>
-                <dd className="mt-0.5 font-semibold">
-                  {AGE_GROUPS(inspected.passengerAge)}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-slate-400">Travel style</dt>
-                <dd className="mt-0.5 font-semibold">
-                  {VIBE[inspected.discussionPreference || "no_preference"]}
-                </dd>
-              </div>
-            </dl>
-          )}
         </div>
       )}
 
