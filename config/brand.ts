@@ -33,9 +33,9 @@ export const brand = {
   },
 
   support: {
-    phone: "(+237) 677 00 00 00",
-    phoneHref: "+237677000000",
-    whatsapp: "237677000000",
+    phone: "(+237) 654 15 52 18",
+    phoneHref: "+237654155218",
+    whatsapp: "237654155218",
     email: "support@vaticantravels.cm",
     hours: "Daily, 05:00 to 22:00",
   },
