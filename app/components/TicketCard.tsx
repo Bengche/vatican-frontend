@@ -157,9 +157,9 @@ export default function TicketCard({
           </div>
           <div className="shrink-0 rounded-xl border border-slate-200 bg-white p-2">
             <QRCodeSVG
-              value={verifyUrl}
-              size={84}
-              level="M"
+              value={booking.qr_url ?? verifyUrl}
+              size={116}
+              level="L"
               fgColor={brand.colors.primary}
             />
           </div>

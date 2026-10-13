@@ -19,7 +19,17 @@ self.addEventListener("install", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
+  if (!event.data) return;
+  if (event.data.type === "SKIP_WAITING") self.skipWaiting();
+  if (event.data.type === "PRECACHE" && Array.isArray(event.data.urls)) {
+    event.waitUntil(
+      Promise.all(
+        event.data.urls
+          .filter((u) => typeof u === "string" && /^\/(?!\/)/.test(u))
+          .map((u) => precachePage(u).catch(() => {})),
+      ),
+    );
+  }
 });
 
 self.addEventListener("activate", (event) => {
@@ -56,6 +66,23 @@ async function cacheOfflinePage() {
 }
 
 let lastOfflineRefresh = 0;
+
+// Saves a signed-in screen and the scripts it needs, so it still opens with no connection.
+async function precachePage(url) {
+  const response = await fetch(url, {
+    cache: "reload",
+    credentials: "same-origin",
+  });
+  if (!response.ok || response.redirected || response.type !== "basic") return;
+  const html = await response.clone().text();
+  const pages = await caches.open(PAGE_CACHE);
+  await pages.put(url, response);
+  const statics = await caches.open(STATIC_CACHE);
+  const assets = [
+    ...html.matchAll(/(?:href|src)="(\/_next\/static\/[^"]+)"/g),
+  ].map((m) => m[1]);
+  await Promise.all(assets.map((asset) => statics.add(asset).catch(() => {})));
+}
 
 async function navigate(request) {
   if (Date.now() - lastOfflineRefresh > 3_600_000) {

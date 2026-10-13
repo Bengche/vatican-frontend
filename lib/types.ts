@@ -73,6 +73,8 @@ export interface BookingRecord {
   booking_id: number | string;
   booking_ref: string;
   qr_code_hash: string;
+  /** Signed address encoded in the ticket QR; scanners verify it with no network. */
+  qr_url?: string;
   total_amount_fcfa: number;
   booking_status: string;
   payment_method: string;

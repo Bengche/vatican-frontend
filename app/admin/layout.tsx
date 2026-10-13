@@ -24,6 +24,8 @@ const ICONS = {
   payouts: "M3 7h18v10H3V7zm9 7a2 2 0 100-4 2 2 0 000 4zM6 10h.01M18 14h.01",
   staff:
     "M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75",
+  device:
+    "M8 2h8a1 1 0 011 1v18a1 1 0 01-1 1H8a1 1 0 01-1-1V3a1 1 0 011-1zm4 16h.01",
 };
 
 const NAV = [
@@ -41,6 +43,7 @@ const NAV = [
   { label: "Terminals", href: "/admin/agencies", icon: ICONS.terminals },
   { label: "Payouts", href: "/admin/payouts", icon: ICONS.payouts },
   { label: "Staff", href: "/admin/staff", icon: ICONS.staff },
+  { label: "Devices", href: "/admin/devices", icon: ICONS.device },
 ];
 
 export default function AdminLayout({

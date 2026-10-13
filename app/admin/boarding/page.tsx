@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader";
-import { api, errorMessage } from "@/lib/api";
+import GateScanner from "../../components/GateScanner";
+import { api, errorMessage, isNetworkError } from "@/lib/api";
 import { isAdmin, useUser } from "@/lib/auth";
 import { downloadManifest } from "@/lib/download";
 import { formatDate, formatDateTime, formatTime } from "@/lib/format";
@@ -71,7 +72,11 @@ export default function BoardingPage() {
       .catch((err) => {
         if (!active) return;
         setTrips([]);
-        setTripsError(errorMessage(err, "We could not load departures."));
+        setTripsError(
+          isNetworkError(err)
+            ? "You are offline. The scanner above still works from the saved list; the live departure list will load when you reconnect."
+            : errorMessage(err, "We could not load departures."),
+        );
       });
     return () => {
       active = false;
@@ -184,6 +189,8 @@ export default function BoardingPage() {
           {message.text}
         </div>
       )}
+
+      <GateScanner />
 
       <section className="card mb-6 p-5">
         <form onSubmit={search} className="flex flex-col gap-3 sm:flex-row">
