@@ -5,11 +5,16 @@ import PageHeader from "../../components/PageHeader";
 import SeatMap from "../../components/SeatMap";
 import PassengerFields from "../../components/PassengerFields";
 import TicketSlip from "../../components/TicketSlip";
+import ClockWarning from "../../components/ClockWarning";
+import DaySummarySheet from "../../components/DaySummarySheet";
 import { api, errorMessage, isNetworkError } from "@/lib/api";
 import { useUser } from "@/lib/auth";
 import { formatDate, formatDateTime, formatTime, formatXAF } from "@/lib/format";
 import * as counter from "@/lib/offline/counter";
 import type { CounterStatus } from "@/lib/offline/counter";
+import { downloadCsv } from "@/lib/offline/backup";
+import { summarize, summaryText } from "@/lib/offline/summary";
+import { LockedError } from "@/lib/offline/secure";
 import type { CounterBus, CounterRoute, CounterSale, CounterTrip } from "@/lib/offline/counterDb";
 import { checkPin, hasPin, pinSupported, savePin } from "@/lib/offline/pin";
 import type { PassengerInput, Park, Seat } from "@/lib/types";
@@ -69,7 +74,7 @@ export default function CounterSalesPage() {
   const [now, setNow] = useState(0);
   const [reachable, setReachable] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [status, setStatus] = useState<CounterStatus>({ pending: 0, needsAttention: 0, bundleAt: null, trips: 0, parkName: null });
+  const [status, setStatus] = useState<CounterStatus>({ pending: 0, needsAttention: 0, bundleAt: null, trips: 0, parkName: null, clockOffsetMs: 0 });
   const [notice, setNotice] = useState<Notice>(null);
 
   const [label, setLabel] = useState("");
@@ -101,6 +106,7 @@ export default function CounterSalesPage() {
   const [error, setError] = useState("");
   const [issued, setIssued] = useState<{ sale: CounterSale; status: "synced" | "queued" } | null>(null);
   const [slip, setSlip] = useState<CounterSale | null>(null);
+  const [printKind, setPrintKind] = useState<"ticket" | "summary">("ticket");
 
   const [extraOpen, setExtraOpen] = useState(false);
   const [extra, setExtra] = useState({ routeId: "", busId: "", date: "", time: "", fare: "" });
@@ -128,8 +134,9 @@ export default function CounterSalesPage() {
         const wanted = new URLSearchParams(window.location.search).get("tripId");
         return t.find((x) => x.id === wanted)?.key ?? t[0]?.key ?? "";
       });
-    } catch {
-      setNotice({ type: "error", text: "We could not read the saved counter data on this device." });
+    } catch (err) {
+      // While the phone is locked its data cannot be read; the screen simply waits for the PIN.
+      if (!(err instanceof LockedError)) setNotice({ type: "error", text: "We could not read the saved counter data on this device." });
     }
   }, []);
 
@@ -163,7 +170,7 @@ export default function CounterSalesPage() {
   }, [phase]);
 
   useEffect(() => {
-    if (phase === "loading" || phase === "unsupported" || phase === "setup" || phase === "revoked") return;
+    if (phase !== "ready") return;
     const tick = () => setNow(Date.now());
     const first = window.setTimeout(() => {
       tick();
@@ -211,7 +218,7 @@ export default function CounterSalesPage() {
     const first = window.setTimeout(run, 0);
     const interval = window.setInterval(run, 30_000);
     window.addEventListener("online", run);
-    const bye = () => void counter.endShiftQuietly(userId);
+    const bye = () => counter.endShiftNow();
     window.addEventListener("pagehide", bye);
     return () => {
       window.clearTimeout(first);
@@ -333,11 +340,57 @@ export default function CounterSalesPage() {
 
   const print = (sale: CounterSale) => {
     setSlip(sale);
+    setPrintKind("ticket");
     window.setTimeout(() => {
       document.body.classList.add("printing-ticket");
       window.addEventListener("afterprint", () => document.body.classList.remove("printing-ticket"), { once: true });
       window.print();
     }, 50);
+  };
+
+  const day = now ? counter.dayOf(now) : "";
+  const summary = summarize(sales, day, counter.dayOf);
+  const agentName = user?.name || "Counter agent";
+
+  const printSummary = () => {
+    setPrintKind("summary");
+    window.setTimeout(() => {
+      document.body.classList.add("printing-ticket");
+      window.addEventListener("afterprint", () => document.body.classList.remove("printing-ticket"), { once: true });
+      window.print();
+    }, 50);
+  };
+
+  const shareSummary = async () => {
+    const text = summaryText(summary, agentName, status.parkName);
+    try {
+      if (navigator.share) await navigator.share({ text });
+      else {
+        await navigator.clipboard.writeText(text);
+        setNotice({ type: "success", text: "Summary copied. Paste it into a message." });
+      }
+    } catch {
+      /* sharing was cancelled */
+    }
+  };
+
+  // A plain-text copy of what is on the phone, so a manager can enter the sales by hand if the phone is lost.
+  const saveBackup = () => {
+    downloadCsv(`counter-sales-${day || "today"}.csv`, [
+      ["Ticket", "Paper number", "Sold at", "Passengers", "Seats", "Amount XAF", "Paid by", "Mobile Money number", "Status"],
+      ...sales.map((s) => [
+        s.ref,
+        s.paperRef ?? "",
+        s.soldAt,
+        s.passengers.map((p) => p.name).join("; "),
+        s.passengers.map((p) => p.seatLabel).join("; "),
+        s.amount,
+        s.payment.method,
+        s.payment.ref ?? "",
+        s.state,
+      ]),
+    ]);
+    setNotice({ type: "success", text: "Backup saved. It contains passenger names, so keep the file private." });
   };
 
   const addExtra = async (event: React.FormEvent) => {
@@ -383,7 +436,7 @@ export default function CounterSalesPage() {
   const createPin = async (event: React.FormEvent) => {
     event.preventDefault();
     setPinError("");
-    if (!/^\d{4,6}$/.test(pin)) return setPinError("Use 4 to 6 digits.");
+    if (!/^\d{6}$/.test(pin)) return setPinError("Use exactly 6 digits.");
     if (pin !== pinAgain) return setPinError("The two PINs do not match.");
     setFormBusy(true);
     try {
@@ -485,9 +538,9 @@ export default function CounterSalesPage() {
         {header}
         <form onSubmit={createPin} className="card max-w-md space-y-3 p-5">
           <h2 className="text-base font-bold text-slate-900">Choose a PIN for this device</h2>
-          <p className="text-sm text-slate-600">The counter locks after a few idle minutes and asks for this PIN, so a lost phone cannot be used to sell tickets.</p>
+          <p className="text-sm text-slate-600">The counter locks after a few idle minutes and asks for this PIN. The PIN also protects the sales and passenger data stored on this phone, so choose 6 digits that are hard to guess and do not share them.</p>
           {pinError && <div className="alert alert-error" role="alert">{pinError}</div>}
-          <input className="input" type="password" inputMode="numeric" autoComplete="new-password" placeholder="4 to 6 digits" maxLength={6} aria-label="New PIN" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
+          <input className="input" type="password" inputMode="numeric" autoComplete="new-password" placeholder="6 digits" maxLength={6} aria-label="New PIN" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
           <input className="input" type="password" inputMode="numeric" autoComplete="new-password" placeholder="Repeat PIN" maxLength={6} aria-label="Repeat PIN" value={pinAgain} onChange={(e) => setPinAgain(e.target.value.replace(/\D/g, ""))} />
           <button type="submit" className="btn btn-primary" disabled={formBusy}>Save PIN</button>
         </form>
@@ -503,7 +556,7 @@ export default function CounterSalesPage() {
           <h2 className="text-base font-bold text-slate-900">Counter locked</h2>
           {status.pending > 0 && <p className="text-xs text-slate-500">{status.pending} sale(s) waiting to upload.</p>}
           {pinError && <div className="alert alert-error" role="alert">{pinError}</div>}
-          <input className="input" type="password" inputMode="numeric" autoComplete="off" placeholder="PIN" maxLength={6} aria-label="PIN" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} disabled={tries >= MAX_PIN_TRIES} />
+          <input className="input" type="password" inputMode="numeric" autoComplete="off" placeholder="PIN" maxLength={8} aria-label="PIN" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} disabled={tries >= MAX_PIN_TRIES} />
           <button type="submit" className="btn btn-primary" disabled={formBusy || pin.length < 4 || tries >= MAX_PIN_TRIES}>Unlock</button>
         </form>
       </div>
@@ -533,6 +586,7 @@ export default function CounterSalesPage() {
           </button>
         </div>
 
+        <ClockWarning offsetMs={status.clockOffsetMs} />
         {(empty || stale) && (
           <div className="alert alert-error mb-4" role="alert">
             {empty
@@ -706,6 +760,32 @@ export default function CounterSalesPage() {
           </div>
         )}
 
+        <section className="card mt-8 p-5">
+          <h2 className="text-sm font-bold text-slate-900">Today&apos;s summary</h2>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-500">Cash to hand over</p>
+              <p className="text-lg font-bold text-slate-900">{formatXAF(summary.cashAmount)}</p>
+              <p className="text-xs text-slate-500">{summary.cashSales} sales</p>
+            </div>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-500">Mobile Money (to verify)</p>
+              <p className="text-lg font-bold text-slate-900">{formatXAF(summary.momoAmount)}</p>
+              <p className="text-xs text-slate-500">{summary.momoSales} sales</p>
+            </div>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs text-slate-500">Tickets sold</p>
+              <p className="text-lg font-bold text-slate-900">{summary.tickets}</p>
+              <p className="text-xs text-slate-500">{summary.waiting} not uploaded yet</p>
+            </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" className="btn btn-outline btn-sm" onClick={printSummary}>Print summary</button>
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => void shareSummary()}>Share as message</button>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={saveBackup}>Save backup (CSV)</button>
+          </div>
+        </section>
+
         <section className="card mt-8 overflow-hidden">
           <div className="border-b border-slate-100 p-5">
             <h2 className="text-sm font-bold text-slate-900">Sold on this device</h2>
@@ -755,7 +835,11 @@ export default function CounterSalesPage() {
       </div>
 
       <div id="print-ticket" className="hidden" aria-hidden>
-        {slip && <TicketSlip sale={slip} />}
+        {printKind === "summary" ? (
+          <DaySummarySheet summary={summary} agent={agentName} terminal={status.parkName} />
+        ) : (
+          slip && <TicketSlip sale={slip} />
+        )}
       </div>
     </div>
   );

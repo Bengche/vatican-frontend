@@ -43,6 +43,8 @@ export interface CounterStatus {
   bundleAt: number | null;
   trips: number;
   parkName: string | null;
+  /** How far this phone's clock was from the server's at the last contact (ms, positive = server ahead). */
+  clockOffsetMs: number;
 }
 
 export interface SellInput {
@@ -127,9 +129,12 @@ const departureMs = (trip: { travelDate: string; departureTime: string }) =>
 
 /* ------------------------------- setup ------------------------------- */
 
+const remembered = { deviceId: null as string | null, pending: 0 };
+
 export async function getSetup(userId: string): Promise<CounterSetup | null> {
   const deviceId = await store.getMeta<string>(`device:${userId}`);
   const code = await store.getMeta<string>(`code:${userId}`);
+  remembered.deviceId = deviceId ?? null;
   return deviceId && code ? { deviceId, code, keyId: `c${code}` } : null;
 }
 
@@ -145,7 +150,7 @@ export async function registerCounter(userId: string, label: string, parkId: str
     parkId,
     publicKey: toBase64Url(pair.publicKey),
   });
-  await store.setMeta(`secret:${userId}`, toBase64(pair.secretKey));
+  await store.setSecureMeta(`secret:${userId}`, toBase64(pair.secretKey));
   await store.setMeta(`device:${userId}`, data.device.id);
   await store.setMeta(`code:${userId}`, data.device.code);
   await store.deleteMeta(`revoked:${userId}`);
@@ -155,7 +160,14 @@ export async function registerCounter(userId: string, label: string, parkId: str
 async function headersFor(userId: string) {
   const setup = await getSetup(userId);
   if (!setup) throw new CounterDeviceMissingError();
-  return { "X-Device-Id": setup.deviceId };
+  // The server records how far this phone's clock is off and how many sales still wait to upload.
+  const pending = (await store.listSales()).filter((s) => s.state === "pending").length;
+  remembered.pending = pending;
+  return {
+    "X-Device-Id": setup.deviceId,
+    "X-Client-Time": String(Date.now()),
+    "X-Pending": String(pending),
+  };
 }
 
 async function handleDeviceError(userId: string, error: unknown): Promise<never> {
@@ -210,18 +222,21 @@ export async function downloadBundle(userId: string) {
 }
 
 export async function getStatus(): Promise<CounterStatus> {
-  const [sales, bundleAt, trips, park] = await Promise.all([
+  const [sales, bundleAt, trips, park, offset] = await Promise.all([
     store.listSales(),
     store.getMeta<number>("bundleAt"),
     store.listTrips(),
     store.getMeta<{ city: string; park_name: string }>("park"),
+    store.getMeta<number>("serverOffsetMs"),
   ]);
+  remembered.pending = sales.filter((s) => s.state === "pending").length;
   return {
-    pending: sales.filter((s) => s.state === "pending").length,
+    pending: remembered.pending,
     needsAttention: sales.filter((s) => s.state === "flagged" || s.state === "rejected").length,
     bundleAt: bundleAt ?? null,
     trips: trips.length,
     parkName: park ? `${park.city} - ${park.park_name}` : null,
+    clockOffsetMs: offset ?? 0,
   };
 }
 
@@ -236,16 +251,18 @@ export async function heartbeat(userId: string, selling: boolean) {
   }
 }
 
-/** Best-effort goodbye when the page closes while online and nothing is waiting to upload. */
-export async function endShiftQuietly(userId: string) {
-  const setup = await getSetup(userId);
+/**
+ * Tells the server the shift is over when the page closes while online and nothing waits to upload,
+ * so online booking is not paused for a counter that was simply switched off. It must run
+ * synchronously (a closing page cannot wait), so it relies on values remembered from earlier calls.
+ */
+export function endShiftNow() {
   const token = getToken();
-  if (!setup || !token || !navigator.onLine) return;
-  if ((await store.listSales()).some((s) => s.state === "pending")) return;
+  if (!remembered.deviceId || !token || !navigator.onLine || remembered.pending > 0) return;
   void fetch(`${API_URL}/api/admin/counter/heartbeat`, {
     method: "POST",
     keepalive: true,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "X-Device-Id": setup.deviceId },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, "X-Device-Id": remembered.deviceId },
     body: JSON.stringify({ selling: false }),
   }).catch(() => {});
 }
@@ -288,7 +305,7 @@ function signTicket(secretKey: Uint8Array, keyId: string, hash: string, ref: str
  */
 export async function sell(userId: string, input: SellInput): Promise<SellOutcome> {
   const setup = await getSetup(userId);
-  const secret = await store.getMeta<string>(`secret:${userId}`);
+  const secret = await store.getSecureMeta<string>(`secret:${userId}`);
   const prefix = (await store.getMeta<string>("refPrefix")) ?? brand.monogram;
   if (!setup || !secret) throw new CounterDeviceMissingError();
 

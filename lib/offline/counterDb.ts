@@ -1,5 +1,8 @@
 // Local storage for the offline counter (sales till). Kept separate from the gate scanner's database.
 // Everything survives going offline, closing the browser and signing out, so a sale is never lost.
+// Sales and the device's signing key are encrypted with the key unlocked by the device PIN (see secure.ts).
+import { onUnlock, seal, unseal, wasSealed } from "./secure";
+import type { Sealed } from "./secure";
 
 export interface CounterSeat {
   id: string;
@@ -218,21 +221,39 @@ export async function listRoutes() {
   return request<CounterRoute[]>(db.transaction("routes").objectStore("routes").getAll());
 }
 
+interface SaleRecord {
+  id: string;
+  created: number;
+  v: Sealed | CounterSale;
+}
+
+const toSaleRecord = async (sale: CounterSale): Promise<SaleRecord> => ({
+  id: sale.id,
+  created: sale.created,
+  v: await seal(sale),
+});
+
+// Sales saved before encryption existed are plain objects; both shapes are read the same way.
+const fromSaleRecord = (record: SaleRecord | CounterSale) =>
+  "v" in record ? unseal<CounterSale>(record.v) : Promise.resolve(record);
+
 export async function listSales() {
   const db = await open();
-  const rows = await request<CounterSale[]>(db.transaction("sales").objectStore("sales").getAll());
-  return rows.sort((a, b) => b.created - a.created);
+  const rows = await request<(SaleRecord | CounterSale)[]>(db.transaction("sales").objectStore("sales").getAll());
+  return (await Promise.all(rows.map(fromSaleRecord))).sort((a, b) => b.created - a.created);
 }
 
 export async function getSale(id: string) {
   const db = await open();
-  return request<CounterSale | undefined>(db.transaction("sales").objectStore("sales").get(id));
+  const row = await request<SaleRecord | CounterSale | undefined>(db.transaction("sales").objectStore("sales").get(id));
+  return row ? fromSaleRecord(row) : undefined;
 }
 
 export async function putSale(sale: CounterSale) {
   const db = await open();
+  const record = await toSaleRecord(sale);
   const tx = db.transaction("sales", "readwrite");
-  tx.objectStore("sales").put(sale);
+  tx.objectStore("sales").put(record);
   await finished(tx);
 }
 
@@ -243,49 +264,49 @@ export async function deleteSale(id: string) {
   await finished(tx);
 }
 
+/** Meta values that hold secrets or personal data are encrypted. */
+export async function getSecureMeta<T>(key: string): Promise<T | undefined> {
+  const stored = await getMeta<Sealed | T>(key);
+  return stored === undefined ? undefined : unseal<T>(stored);
+}
+
+export async function setSecureMeta(key: string, value: unknown) {
+  await setMeta(key, await seal(value));
+}
+
 /**
- * Takes the next ticket number and stores the finished sale in one step, so two quick sales can
- * never get the same reference and a crash never leaves a number used without a sale.
+ * Takes the next ticket number and stores the finished sale. The number is taken first, in a
+ * transaction of its own, so two quick sales can never get the same reference; if the page dies before
+ * the sale is saved a number is skipped, which is harmless.
  */
 export async function reserveSale(build: (seq: number) => CounterSale) {
   const db = await open();
-  const tx = db.transaction(["meta", "sales"], "readwrite");
+  const tx = db.transaction("meta", "readwrite");
   const done = finished(tx);
   const meta = tx.objectStore("meta");
   const seqRead = meta.get("refSeq");
-  const result = new Promise<CounterSale>((resolve, reject) => {
+  const taken = new Promise<number>((resolve) => {
     seqRead.onsuccess = () => {
-      try {
-        const seq = (seqRead.result as number | undefined) ?? 0;
-        const sale = build(seq);
-        tx.objectStore("sales").put(sale);
-        meta.put(seq + 1, "refSeq");
-        resolve(sale);
-      } catch (error) {
-        tx.abort();
-        reject(error);
-      }
+      const seq = (seqRead.result as number | undefined) ?? 0;
+      meta.put(seq + 1, "refSeq");
+      resolve(seq);
     };
   });
-  const sale = await result.catch((error) => {
-    done.catch(() => {});
-    throw error;
-  });
+  const seq = await taken;
   await done;
+
+  const sale = build(seq);
+  await putSale(sale);
   return sale;
 }
 
 /** Removes sales that reached the server and are old enough to no longer be needed for a reprint. */
 export async function pruneSales(olderThanMs: number) {
+  const old = (await listSales()).filter((s) => s.state === "synced" && s.created < olderThanMs);
+  if (old.length === 0) return;
   const db = await open();
   const tx = db.transaction("sales", "readwrite");
-  const store = tx.objectStore("sales");
-  const all = store.getAll();
-  all.onsuccess = () => {
-    for (const sale of all.result as CounterSale[]) {
-      if (sale.state === "synced" && sale.created < olderThanMs) store.delete(sale.id);
-    }
-  };
+  for (const sale of old) tx.objectStore("sales").delete(sale.id);
   await finished(tx);
 }
 
@@ -298,3 +319,23 @@ export async function clearReferenceData() {
   tx.objectStore("meta").delete("bundleAt");
   await finished(tx);
 }
+
+// Runs when the device is unlocked: anything saved before a PIN existed is encrypted in place.
+onUnlock(async () => {
+  const db = await open();
+
+  const rows = await request<(SaleRecord | CounterSale)[]>(db.transaction("sales").objectStore("sales").getAll());
+  const plain = rows.filter((r) => !("v" in r)) as CounterSale[];
+  if (plain.length) {
+    const sealed = await Promise.all(plain.map(toSaleRecord));
+    const tx = db.transaction("sales", "readwrite");
+    for (const record of sealed) tx.objectStore("sales").put(record);
+    await finished(tx);
+  }
+
+  const keys = (await request<IDBValidKey[]>(db.transaction("meta").objectStore("meta").getAllKeys())).map(String);
+  for (const key of keys.filter((k) => k.startsWith("secret:"))) {
+    const value = await getMeta<unknown>(key);
+    if (value !== undefined && !wasSealed(value)) await setSecureMeta(key, value);
+  }
+});

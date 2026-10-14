@@ -53,6 +53,8 @@ export interface GateStatus {
   bundleAt: number | null;
   bookings: number;
   issues: SyncIssue[];
+  /** How far this phone's clock was from the server's at the last contact (ms, positive = server ahead). */
+  clockOffsetMs: number;
 }
 
 const emit = () => window.dispatchEvent(new Event(CHANGE_EVENT));
@@ -88,7 +90,12 @@ const errorCode = (error: unknown) =>
 async function deviceHeaders(userId: string) {
   const deviceId = await store.getMeta<string>(`device:${userId}`);
   if (!deviceId) throw new DeviceMissingError();
-  return { "X-Device-Id": deviceId };
+  // The server records how far this phone's clock is off and how many boardings still wait to upload.
+  return {
+    "X-Device-Id": deviceId,
+    "X-Client-Time": String(Date.now()),
+    "X-Pending": String(await store.countQueue()),
+  };
 }
 
 async function handleDeviceError(userId: string, error: unknown): Promise<never> {
@@ -208,8 +215,8 @@ export function flushQueue(userId: string): Promise<number> {
         sent += handled.length;
 
         if (issues.length) {
-          const previous = (await store.getMeta<SyncIssue[]>("issues")) ?? [];
-          await store.setMeta("issues", [...issues, ...previous].slice(0, MAX_ISSUES));
+          const previous = (await store.getSecureMeta<SyncIssue[]>("issues")) ?? [];
+          await store.setSecureMeta("issues", [...issues, ...previous].slice(0, MAX_ISSUES));
         }
         emit();
       }
@@ -224,18 +231,26 @@ export function flushQueue(userId: string): Promise<number> {
 }
 
 export async function dismissIssues() {
-  await store.setMeta("issues", []);
+  await store.setSecureMeta("issues", []);
   emit();
 }
 
 export async function getStatus(): Promise<GateStatus> {
-  const [pending, bundleAt, bookings, issues] = await Promise.all([
+  const [pending, bundleAt, bookings, issues, offset] = await Promise.all([
     store.countQueue(),
     store.getMeta<number>("bundleAt"),
     store.countBookings(),
-    store.getMeta<SyncIssue[]>("issues"),
+    // Issues are encrypted; while the device is locked they are simply not shown.
+    store.getSecureMeta<SyncIssue[]>("issues").catch(() => undefined),
+    store.getMeta<number>("serverOffsetMs"),
   ]);
-  return { pending, bundleAt: bundleAt ?? null, bookings, issues: issues ?? [] };
+  return {
+    pending,
+    bundleAt: bundleAt ?? null,
+    bookings,
+    issues: issues ?? [],
+    clockOffsetMs: offset ?? 0,
+  };
 }
 
 const blocked = (

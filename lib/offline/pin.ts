@@ -1,49 +1,56 @@
-// A short PIN that guards the scanner screen on a shared or lost phone. It stops casual use;
-// it does not encrypt the data stored on the device.
-import { getMeta, setMeta } from "./db";
+// The PIN that unlocks a counter or scanner phone. It protects the screen and, through secure.ts,
+// the data stored on the phone: the PIN unwraps the key that encrypts it.
+import { deleteMeta, getMeta, setMeta } from "./db";
+import { createKeys, cryptoSupported, runUnlockHooks, unlockKeys } from "./secure";
+import type { WrappedKeys } from "./secure";
 
-const ITERATIONS = 150_000;
+const LEGACY_ITERATIONS = 150_000;
 const encoder = new TextEncoder();
 
-export const pinSupported = () =>
-  typeof crypto !== "undefined" && Boolean(crypto.subtle);
+export const pinSupported = cryptoSupported;
 
 const toBase64 = (bytes: ArrayBuffer | Uint8Array) =>
   btoa(String.fromCharCode(...new Uint8Array(bytes)));
 
-async function derive(pin: string, salt: Uint8Array) {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(pin),
-    "PBKDF2",
-    false,
-    ["deriveBits"],
-  );
+// Older versions kept only a hash of the PIN. It is still accepted once, then replaced by wrapped keys.
+async function legacyHash(pin: string, salt: Uint8Array) {
+  const key = await crypto.subtle.importKey("raw", encoder.encode(pin), "PBKDF2", false, ["deriveBits"]);
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt: salt as BufferSource, iterations: ITERATIONS, hash: "SHA-256" },
+    { name: "PBKDF2", salt: salt as BufferSource, iterations: LEGACY_ITERATIONS, hash: "SHA-256" },
     key,
     256,
   );
   return toBase64(bits);
 }
 
-interface StoredPin {
+interface LegacyPin {
   salt: string;
   hash: string;
 }
 
 export async function hasPin() {
-  return Boolean(await getMeta<StoredPin>("pin"));
+  return Boolean((await getMeta<WrappedKeys>("pinKeys")) || (await getMeta<LegacyPin>("pin")));
 }
 
+/** Chooses the PIN: makes the encryption keys, stores them wrapped and leaves the device unlocked. */
 export async function savePin(pin: string) {
-  const salt = crypto.getRandomValues(new Uint8Array(16));
-  await setMeta("pin", { salt: toBase64(salt), hash: await derive(pin, salt) });
+  await setMeta("pinKeys", await createKeys(pin));
+  await deleteMeta("pin");
+  await runUnlockHooks();
 }
 
 export async function checkPin(pin: string) {
-  const stored = await getMeta<StoredPin>("pin");
-  if (!stored) return false;
-  const salt = Uint8Array.from(atob(stored.salt), (c) => c.charCodeAt(0));
-  return (await derive(pin, salt)) === stored.hash;
+  const wrapped = await getMeta<WrappedKeys>("pinKeys");
+  if (wrapped) {
+    const ok = await unlockKeys(pin, wrapped);
+    if (ok) await runUnlockHooks();
+    return ok;
+  }
+
+  const legacy = await getMeta<LegacyPin>("pin");
+  if (!legacy) return false;
+  const salt = Uint8Array.from(atob(legacy.salt), (c) => c.charCodeAt(0));
+  if ((await legacyHash(pin, salt)) !== legacy.hash) return false;
+  await savePin(pin);
+  return true;
 }

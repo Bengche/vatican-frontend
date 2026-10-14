@@ -26,6 +26,8 @@ const ICONS = {
     "M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75",
   device:
     "M8 2h8a1 1 0 011 1v18a1 1 0 01-1 1H8a1 1 0 01-1-1V3a1 1 0 011-1zm4 16h.01",
+  alert:
+    "M12 9v4m0 4h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z",
 };
 
 const NAV = [
@@ -44,6 +46,7 @@ const NAV = [
   { label: "Payouts", href: "/admin/payouts", icon: ICONS.payouts },
   { label: "Staff", href: "/admin/staff", icon: ICONS.staff },
   { label: "Devices", href: "/admin/devices", icon: ICONS.device },
+  { label: "Needs attention", href: "/admin/issues", icon: ICONS.alert },
 ];
 
 export default function AdminLayout({
@@ -56,6 +59,7 @@ export default function AdminLayout({
   const user = useUser();
   const [open, setOpen] = useState(false);
   const [payoutAlerts, setPayoutAlerts] = useState(0);
+  const [issueCount, setIssueCount] = useState(0);
 
   const allowed = isStaff(user) && canVisit(user?.role, pathname);
   const admin = isAdmin(user);
@@ -75,6 +79,12 @@ export default function AdminLayout({
       .then(({ data }) => {
         if (active)
           setPayoutAlerts(Number(data.failed || 0) + Number(data.stuck || 0));
+      })
+      .catch(() => {});
+    api
+      .get("/admin/issues/count")
+      .then(({ data }) => {
+        if (active) setIssueCount(Number(data.total || 0));
       })
       .catch(() => {});
     return () => {
@@ -120,6 +130,11 @@ export default function AdminLayout({
                 <path d={item.icon} />
               </svg>
               {item.label}
+              {item.href === "/admin/issues" && issueCount > 0 && (
+                <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
+                  {issueCount}
+                </span>
+              )}
               {item.href === "/admin/payouts" && payoutAlerts > 0 && (
                 <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
                   {payoutAlerts}

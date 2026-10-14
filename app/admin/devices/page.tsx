@@ -16,6 +16,8 @@ interface Device {
   revoked_at: string | null;
   selling_since: string | null;
   lease_until: string | null;
+  clock_offset_ms: string | number | null;
+  pending_items: number | null;
   park_city: string | null;
   park_name: string | null;
   user_name: string;
@@ -24,6 +26,15 @@ interface Device {
 
 const DAY_MS = 86_400_000;
 const PAUSE_MS = 14 * 3_600_000;
+
+/** A device that has not reported in for a day, or never did: it may be lost, broken or switched off. */
+const isStale = (device: Device, now: number) => {
+  if (device.revoked_at) return false;
+  const last = device.last_sync_at ?? device.last_seen_at ?? device.created_at;
+  return now - new Date(last).getTime() > DAY_MS;
+};
+
+const driftMinutes = (device: Device) => Math.round(Math.abs(Number(device.clock_offset_ms ?? 0)) / 60_000);
 
 /** A counter that was selling and has stopped reporting in: online booking for its terminal is paused. */
 const isPaused = (device: Device, now: number) => {
@@ -64,6 +75,7 @@ export default function DevicesPage() {
 
   const rows = result?.rows ?? [];
   const loading = result?.key !== reload;
+  const staleCount = rows.filter((d) => isStale(d, now)).length;
 
   const revoke = async (device: Device) => {
     if (!window.confirm(`Disable "${device.label}"? It will stop syncing and its offline data is removed the next time it connects.`)) return;
@@ -104,6 +116,11 @@ export default function DevicesPage() {
       {result?.error && (
         <div className="alert alert-error mb-5" role="alert">
           {result.error}
+        </div>
+      )}
+      {staleCount > 0 && (
+        <div className="alert alert-error mb-5" role="alert">
+          {staleCount} device(s) have not reported in for over a day. Check that they are not lost, broken or switched off, and ask the staff to open the app with a connection.
         </div>
       )}
 
@@ -155,6 +172,15 @@ export default function DevicesPage() {
                           <span className="mt-1 block text-[11px] font-semibold text-amber-800">
                             Offline mid-shift: online booking is paused for this terminal.
                           </span>
+                        )}
+                        {isStale(device, now) && (
+                          <span className="mt-1 block text-[11px] font-semibold text-red-700">Has not reported in for over a day.</span>
+                        )}
+                        {!device.revoked_at && (device.pending_items ?? 0) > 0 && (
+                          <span className="mt-1 block text-[11px] font-semibold text-amber-800">{device.pending_items} item(s) waiting to upload on the device.</span>
+                        )}
+                        {!device.revoked_at && driftMinutes(device) >= 2 && (
+                          <span className="mt-1 block text-[11px] font-semibold text-amber-800">Clock is about {driftMinutes(device)} min off.</span>
                         )}
                       </td>
                       <td className="px-5 py-3.5 text-right">

@@ -13,8 +13,11 @@ import { isAdmin, useUser } from "@/lib/auth";
 import { formatDate, formatDateTime, formatTime } from "@/lib/format";
 import * as gate from "@/lib/offline/gate";
 import type { GateStatus, ScanResult } from "@/lib/offline/gate";
-import { getBookingByRef, searchBookings } from "@/lib/offline/db";
-import type { LocalBooking } from "@/lib/offline/db";
+import { getBookingByRef, listBookings, listQueue, listTrips, searchBookings } from "@/lib/offline/db";
+import type { LocalBooking, LocalTrip } from "@/lib/offline/db";
+import { downloadCsv } from "@/lib/offline/backup";
+import ClockWarning from "./ClockWarning";
+import ManifestSheet from "./ManifestSheet";
 import { parseScan } from "@/lib/offline/qr";
 import { checkPin, hasPin, pinSupported, savePin } from "@/lib/offline/pin";
 
@@ -97,6 +100,7 @@ export default function GateScanner() {
     bundleAt: null,
     bookings: 0,
     issues: [],
+    clockOffsetMs: 0,
   });
   const [syncing, setSyncing] = useState(false);
   const [reachable, setReachable] = useState(true);
@@ -120,13 +124,42 @@ export default function GateScanner() {
   const pausedRef = useRef(false);
   const lastActive = useRef(0);
 
+  const [localTrips, setLocalTrips] = useState<LocalTrip[]>([]);
+  const [listTripId, setListTripId] = useState("");
+  const [listPrint, setListPrint] = useState<{ trip: LocalTrip; bookings: LocalBooking[] } | null>(null);
+
   const refreshStatus = useCallback(async () => {
     try {
       setStatus(await gate.getStatus());
+      const trips = (await listTrips()).sort((a, b) => `${a.travel_date}${a.departure_time}`.localeCompare(`${b.travel_date}${b.departure_time}`));
+      setLocalTrips(trips);
+      setListTripId((current) => (current && trips.some((t) => t.id === current) ? current : (trips[0]?.id ?? "")));
     } catch {
       setStatus((current) => current);
     }
   }, []);
+
+  const printList = async () => {
+    const trip = localTrips.find((t) => t.id === listTripId);
+    if (!trip) return;
+    const bookings = (await listBookings()).filter((b) => b.trip_id === trip.id);
+    setListPrint({ trip, bookings });
+    window.setTimeout(() => {
+      document.body.classList.add("printing-ticket");
+      window.addEventListener("afterprint", () => document.body.classList.remove("printing-ticket"), { once: true });
+      window.print();
+    }, 50);
+  };
+
+  // A plain-text copy of boardings that have not uploaded yet, in case this phone is lost before it syncs.
+  const saveBackup = async () => {
+    const queue = await listQueue();
+    downloadCsv(`boardings-waiting-${new Date().toISOString().slice(0, 10)}.csv`, [
+      ["Ticket", "Boarded at"],
+      ...queue.map((q) => [q.ref, q.scannedAt]),
+    ]);
+    setNotice({ type: "success", text: queue.length ? `Saved ${queue.length} waiting boarding(s). Keep the file private.` : "Nothing is waiting to upload." });
+  };
 
   // Work out which screen to show: set up, locked, or ready to scan.
   useEffect(() => {
@@ -382,7 +415,7 @@ export default function GateScanner() {
   const createPin = async (event: React.FormEvent) => {
     event.preventDefault();
     setPinError("");
-    if (!/^\d{4,6}$/.test(pin)) return setPinError("Use 4 to 6 digits.");
+    if (!/^\d{6}$/.test(pin)) return setPinError("Use exactly 6 digits.");
     if (pin !== pinAgain) return setPinError("The two PINs do not match.");
     setFormBusy(true);
     try {
@@ -479,9 +512,9 @@ export default function GateScanner() {
     return shell(
       <form onSubmit={createPin} className="max-w-md space-y-3">
         <h2 className="text-base font-bold text-slate-900">Choose a PIN for this device</h2>
-        <p className="text-sm text-slate-600">The scanner locks after a few idle minutes and asks for this PIN, so a lost phone cannot be used to board people.</p>
+        <p className="text-sm text-slate-600">The scanner locks after a few idle minutes and asks for this PIN. The PIN also protects the passenger data stored on this phone, so choose 6 digits that are hard to guess and do not share them.</p>
         {pinError && <div className="alert alert-error" role="alert">{pinError}</div>}
-        <input className="input" type="password" inputMode="numeric" autoComplete="new-password" placeholder="4 to 6 digits" maxLength={6} aria-label="New PIN" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
+        <input className="input" type="password" inputMode="numeric" autoComplete="new-password" placeholder="6 digits" maxLength={6} aria-label="New PIN" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} />
         <input className="input" type="password" inputMode="numeric" autoComplete="new-password" placeholder="Repeat PIN" maxLength={6} aria-label="Repeat PIN" value={pinAgain} onChange={(e) => setPinAgain(e.target.value.replace(/\D/g, ""))} />
         <button type="submit" className="btn btn-primary" disabled={formBusy}>Save PIN</button>
       </form>,
@@ -494,7 +527,7 @@ export default function GateScanner() {
         <h2 className="text-base font-bold text-slate-900">Scanner locked</h2>
         {status.pending > 0 && <p className="text-xs text-slate-500">{status.pending} boarding(s) waiting to sync.</p>}
         {pinError && <div className="alert alert-error" role="alert">{pinError}</div>}
-        <input className="input" type="password" inputMode="numeric" autoComplete="off" placeholder="PIN" maxLength={6} aria-label="PIN" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} disabled={tries >= MAX_PIN_TRIES} />
+        <input className="input" type="password" inputMode="numeric" autoComplete="off" placeholder="PIN" maxLength={8} aria-label="PIN" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} disabled={tries >= MAX_PIN_TRIES} />
         <button type="submit" className="btn btn-primary" disabled={formBusy || pin.length < 4 || tries >= MAX_PIN_TRIES}>Unlock</button>
       </form>,
     );
@@ -524,6 +557,7 @@ export default function GateScanner() {
             : "The saved list is more than a day old. Tickets sold since then are not on it."}
         </div>
       )}
+      <ClockWarning offsetMs={status.clockOffsetMs} />
       {notice && <div className={`alert mt-3 ${notice.type === "error" ? "alert-error" : "alert-success"}`} role="status">{notice.text}</div>}
       {cameraError && <div className="alert alert-error mt-3" role="alert">{cameraError}</div>}
 
@@ -617,6 +651,26 @@ export default function GateScanner() {
             </p>
           )}
         </div>
+      </div>
+
+      <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-end">
+        <div className="min-w-0 flex-1">
+          <label htmlFor="list-trip" className="label">Passenger list for the driver (works offline)</label>
+          <select id="list-trip" className="input" value={listTripId} onChange={(e) => setListTripId(e.target.value)} disabled={localTrips.length === 0}>
+            {localTrips.length === 0 ? <option>No departures saved</option> : null}
+            {localTrips.map((t) => (
+              <option key={t.id} value={t.id}>
+                {formatDate(t.travel_date)} {formatTime(t.departure_time)} | {t.origin_city} to {t.destination_city} | {t.bus_number}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="button" className="btn btn-outline shrink-0" disabled={!listTripId} onClick={() => void printList()}>Print list</button>
+        <button type="button" className="btn btn-ghost shrink-0" onClick={() => void saveBackup()}>Save backup (CSV)</button>
+      </div>
+
+      <div id="print-ticket" className="hidden" aria-hidden>
+        {listPrint && <ManifestSheet trip={listPrint.trip} bookings={listPrint.bookings} />}
       </div>
     </>,
   );
