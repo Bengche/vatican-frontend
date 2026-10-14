@@ -182,7 +182,7 @@ export function flushQueue(userId: string): Promise<number> {
         }[]) {
           const entry = byId.get(result.id);
           if (!entry) continue;
-          if (result.result !== "applied") {
+          if (result.result !== "applied" && result.result !== "pending") {
             issues.push({
               id: entry.id,
               ref: entry.ref,
@@ -198,7 +198,9 @@ export function flushQueue(userId: string): Promise<number> {
 
         // Anything the server answered about (even a rejection) is done; the rest stays queued.
         const answered = new Set<string>(
-          (data.results as { id: string }[]).map((r) => r.id),
+          (data.results as { id: string; result: string }[])
+            .filter((r) => r.result !== "pending")
+            .map((r) => r.id),
         );
         const handled = batch.filter((entry) => answered.has(entry.id));
         if (handled.length === 0) break;
@@ -265,7 +267,7 @@ export async function evaluate(
   if (booking) {
     if (
       (scan.ref && scan.ref.toUpperCase() !== booking.ref.toUpperCase()) ||
-      (scan.tripId && scan.tripId !== booking.trip_id)
+      (scan.tripId && scan.tripId !== booking.trip_id && scan.tripId !== booking.qr_trip)
     ) {
       return blocked("forged", "This ticket does not match our records. Do not board.");
     }
@@ -292,7 +294,7 @@ export async function evaluate(
       id: "",
       hash: scan.hash,
       ref: scan.ref!,
-      trip_id: scan.tripId!,
+      trip_id: trip.id,
       status: "confirmed",
       boarded: false,
       boarded_at: null,

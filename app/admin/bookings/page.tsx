@@ -11,6 +11,9 @@ interface Row {
   booking_ref: string;
   status: string;
   payment_method: string;
+  counter_payment?: string | null;
+  payment_unverified?: boolean;
+  paper_ref?: string | null;
   total_amount_fcfa: number;
   created_at: string;
   is_checked_in: boolean;
@@ -373,7 +376,14 @@ export default function BookingsPage() {
                     <td className="px-5 py-3.5 text-right font-semibold text-slate-900">
                       {formatXAF(row.total_amount_fcfa)}
                       <br />
-                      <span className="text-xs font-normal text-slate-500">{row.payment_method === "cash_counter" ? "Cash" : "Mobile Money"}</span>
+                      <span className="text-xs font-normal text-slate-500">
+                        {row.payment_method !== "cash_counter"
+                          ? "Mobile Money"
+                          : row.counter_payment === "momo_manual"
+                            ? `Mobile Money at counter${row.payment_unverified ? " (to verify)" : ""}`
+                            : "Cash"}
+                      </span>
+                      {row.paper_ref && <span className="block text-[11px] font-normal text-slate-500">Paper {row.paper_ref}</span>}
                     </td>
                     <td className="px-5 py-3.5">
                       <StatusBadge status={row.status} />

@@ -9,15 +9,28 @@ import { ROLE_LABELS } from "@/lib/roles";
 interface Device {
   id: string;
   label: string;
+  kind: "scanner" | "counter";
   created_at: string;
   last_seen_at: string | null;
   last_sync_at: string | null;
   revoked_at: string | null;
+  selling_since: string | null;
+  lease_until: string | null;
+  park_city: string | null;
+  park_name: string | null;
   user_name: string;
   user_role: string;
 }
 
 const DAY_MS = 86_400_000;
+const PAUSE_MS = 14 * 3_600_000;
+
+/** A counter that was selling and has stopped reporting in: online booking for its terminal is paused. */
+const isPaused = (device: Device, now: number) => {
+  if (device.kind !== "counter" || device.revoked_at || !device.selling_since || !device.lease_until) return false;
+  const quietFor = now - new Date(device.lease_until).getTime();
+  return quietFor > 0 && quietFor < PAUSE_MS;
+};
 
 function syncState(device: Device) {
   if (device.revoked_at) return { text: "Disabled", tone: "bg-slate-100 text-slate-600" };
@@ -30,6 +43,7 @@ function syncState(device: Device) {
 
 export default function DevicesPage() {
   const [reload, setReload] = useState(0);
+  const [now, setNow] = useState(0);
   const [result, setResult] = useState<{ key: number; rows: Device[]; error: string } | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -37,7 +51,11 @@ export default function DevicesPage() {
     let active = true;
     api
       .get("/admin/devices")
-      .then(({ data }) => active && setResult({ key: reload, rows: data.devices ?? [], error: "" }))
+      .then(({ data }) => {
+        if (!active) return;
+        setNow(Date.now());
+        setResult({ key: reload, rows: data.devices ?? [], error: "" });
+      })
       .catch((err) => active && setResult({ key: reload, rows: [], error: errorMessage(err, "We could not load devices.") }));
     return () => {
       active = false;
@@ -56,6 +74,17 @@ export default function DevicesPage() {
       setReload((n) => n + 1);
     } catch (err) {
       setMessage({ type: "error", text: errorMessage(err, "We could not disable this device.") });
+    }
+  };
+
+  const reopen = async (device: Device) => {
+    setMessage(null);
+    try {
+      await api.post(`/admin/devices/${device.id}/end-session`);
+      setMessage({ type: "success", text: "Online booking reopened for this terminal." });
+      setReload((n) => n + 1);
+    } catch (err) {
+      setMessage({ type: "error", text: errorMessage(err, "We could not reopen online booking.") });
     }
   };
 
@@ -104,9 +133,15 @@ export default function DevicesPage() {
               ) : (
                 rows.map((device) => {
                   const state = syncState(device);
+                  const paused = isPaused(device, now);
                   return (
                     <tr key={device.id}>
-                      <td className="px-5 py-3.5 font-semibold text-slate-900">{device.label}</td>
+                      <td className="px-5 py-3.5 font-semibold text-slate-900">
+                        {device.label}
+                        <span className="block text-xs font-normal text-slate-500">
+                          {device.kind === "counter" ? `Counter${device.park_city ? `, ${device.park_city}` : ""}` : "Boarding scanner"}
+                        </span>
+                      </td>
                       <td className="px-5 py-3.5 text-slate-700">
                         {device.user_name}
                         <span className="block text-xs text-slate-500">{ROLE_LABELS[device.user_role] ?? device.user_role}</span>
@@ -116,8 +151,18 @@ export default function DevicesPage() {
                       </td>
                       <td className="px-5 py-3.5">
                         <span className={`rounded-md px-2 py-1 text-xs font-bold ${state.tone}`}>{state.text}</span>
+                        {paused && (
+                          <span className="mt-1 block text-[11px] font-semibold text-amber-800">
+                            Offline mid-shift: online booking is paused for this terminal.
+                          </span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5 text-right">
+                        {paused && (
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => reopen(device)}>
+                            Reopen online booking
+                          </button>
+                        )}
                         {!device.revoked_at && (
                           <button type="button" className="btn btn-ghost btn-sm text-red-700" onClick={() => revoke(device)}>
                             Disable

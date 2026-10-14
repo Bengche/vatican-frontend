@@ -56,7 +56,7 @@ export function checkSignature(
   if (!scan.hash || !scan.ref || !scan.tripId || !scan.keyId || !scan.signature)
     return "missing";
 
-  const key = keys.find((k) => k.keyId === scan.keyId);
+  const key = keys.find((k) => k.keyId === scan.keyId && !k.revoked);
   if (!key) return "unknown-key";
 
   try {

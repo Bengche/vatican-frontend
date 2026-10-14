@@ -10,6 +10,10 @@ interface Props {
   maxSeats?: number;
   confirmLabel?: string;
   onConfirm: (seats: Seat[]) => void;
+  /** Reads seats from somewhere other than the server, for example the offline counter's own data. */
+  loader?: () => Promise<Seat[]>;
+  /** Change this number to reload the seats after local data changed. */
+  version?: number;
 }
 
 const AGE_GROUPS = (age?: number | null) => {
@@ -32,6 +36,8 @@ export default function SeatMap({
   maxSeats = 8,
   confirmLabel = "Continue",
   onConfirm,
+  loader,
+  version = 0,
 }: Props) {
   const [seats, setSeats] = useState<Seat[]>([]);
   const [selected, setSelected] = useState<(string | number)[]>([]);
@@ -41,7 +47,12 @@ export default function SeatMap({
   const [inspected, setInspected] = useState<Seat | null>(null);
   const [attempt, setAttempt] = useState(0);
   const selectedRef = useRef(selected);
+  const loaderRef = useRef(loader);
   const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    loaderRef.current = loader;
+  }, [loader]);
 
   useEffect(() => {
     if (!inspected) return;
@@ -66,11 +77,14 @@ export default function SeatMap({
     let active = true;
 
     const fetchSeats = (silent: boolean) =>
-      api
-        .get(`/buses/${busId}/layout`, { params: { tripId } })
-        .then(({ data }) => {
+      (loaderRef.current
+        ? loaderRef.current()
+        : api
+            .get(`/buses/${busId}/layout`, { params: { tripId } })
+            .then(({ data }) => data.seats as Seat[])
+      )
+        .then((next) => {
           if (!active) return;
-          const next: Seat[] = data.seats;
           setSeats(next);
           setError("");
 
@@ -106,7 +120,7 @@ export default function SeatMap({
       active = false;
       clearInterval(timer);
     };
-  }, [busId, tripId, attempt]);
+  }, [busId, tripId, attempt, version]);
 
   const toggle = (seat: Seat) => {
     if (seat.isAisle) return;

@@ -184,4 +184,20 @@ textarea,
   .no-print {
     display: none !important;
   }
+
+  /* Printing a counter ticket: show only the ticket, whatever the page around it contains. */
+  body.printing-ticket * {
+    visibility: hidden;
+  }
+  body.printing-ticket #print-ticket,
+  body.printing-ticket #print-ticket * {
+    visibility: visible;
+  }
+  body.printing-ticket #print-ticket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: block !important;
+  }
 }

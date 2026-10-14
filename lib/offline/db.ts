@@ -15,10 +15,15 @@ export interface LocalBooking {
   boarded: boolean;
   boarded_at: string | null;
   passengers: LocalPassenger[];
+  /** Number written on a paper ticket, when one was entered later. */
+  paper_ref?: string | null;
+  /** The departure id printed in the QR when it differs from trip_id (departures added offline). */
+  qr_trip?: string | null;
 }
 
 export interface LocalTrip {
   id: string;
+  client_id?: string | null;
   travel_date: string;
   departure_time: string;
   bus_number: string;
@@ -30,6 +35,8 @@ export interface TicketKey {
   keyId: string;
   publicKey: string;
   retired: boolean;
+  /** A disabled counter device: tickets it signs are no longer trusted on their own. */
+  revoked?: boolean;
 }
 
 export interface QueuedBoarding {
@@ -184,6 +191,7 @@ export async function searchBookings(text: string, limit = 12) {
     .filter(
       (b) =>
         b.ref.toLowerCase().includes(needle) ||
+        (b.paper_ref ?? "").toLowerCase().includes(needle) ||
         b.passengers.some(
           (p) =>
             p.name.toLowerCase().includes(needle) ||
@@ -207,11 +215,17 @@ export async function listTrips() {
   );
 }
 
+/** Finds a departure by its server id or by the id a counter printed before the server knew it. */
 export async function getTrip(id: string) {
   const db = await open();
-  return request<LocalTrip | undefined>(
+  const direct = await request<LocalTrip | undefined>(
     db.transaction("trips").objectStore("trips").get(id),
   );
+  if (direct) return direct;
+  const all = await request<LocalTrip[]>(
+    db.transaction("trips").objectStore("trips").getAll(),
+  );
+  return all.find((trip) => trip.client_id === id);
 }
 
 /** Saves a boarding and marks the ticket as used on this device in one step. */
