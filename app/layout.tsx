@@ -5,6 +5,7 @@ import { brand } from "@/config/brand";
 import "./globals.css";
 import PwaProvider from "./components/PwaProvider";
 import WhatsAppButton from "./components/WhatsAppButton";
+import DemoBanner from "./components/DemoBanner";
 
 const sans = Public_Sans({
   variable: "--font-body",
@@ -71,6 +72,7 @@ export default function RootLayout({
       style={brandVariables}
     >
       <body className="flex min-h-dvh flex-col">
+        <DemoBanner />
         {children}
         <PwaProvider />
         <WhatsAppButton />
